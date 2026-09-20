@@ -32,6 +32,7 @@ import math
 import numpy as np
 import pandas as pd
 
+from research_experiments.utils.export_run_level_data import export_run_level_outputs
 from research_experiments.utils.significance import (
     friedman_test_suite,
     load_run_level_minima,
@@ -343,6 +344,7 @@ def generate_results(input_path: str, outdir: str):
 
     # Statistical significance testing
     raw_dir = os.path.dirname(os.path.abspath(input_path))
+    run_df = None
     wilcoxon_df = None
     wilcoxon_path = None
     try:
@@ -377,6 +379,23 @@ def generate_results(input_path: str, outdir: str):
     except Exception as e:
         print("Warning: could not compute Friedman test:", e, file=sys.stderr)
 
+    # Reviewer-facing per-run exports (tidy per-run minima, win rates, renamed
+    # significance tables). Reuses the frames computed above rather than re-reading
+    # the runs_*.csv files, which dominate a session's size.
+    exported = {}
+    try:
+        exported = export_run_level_outputs(
+            csv_dir=raw_dir,
+            out_dir=outdir,
+            run_df=run_df,
+            wilcoxon_df=wilcoxon_df,
+            friedman_result=friedman_result,
+        )
+        if not exported:
+            print(f"No runs_*.csv raw data found in {raw_dir}; skipping per-run exports.", file=sys.stderr)
+    except Exception as e:
+        print("Warning: could not write per-run exports:", e, file=sys.stderr)
+
     # Word report
     # Charts (no seaborn; one chart per figure)
     try:
@@ -402,6 +421,8 @@ def generate_results(input_path: str, outdir: str):
         print(" -", friedman_omnibus_path)
     if friedman_posthoc_path:
         print(" -", friedman_posthoc_path)
+    for path in exported.values():
+        print(" -", path)
     print(" -", word_path)
 
 

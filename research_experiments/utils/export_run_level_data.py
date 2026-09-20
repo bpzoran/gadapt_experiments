@@ -24,11 +24,17 @@ Produces, into <session>/output/:
       The per-function-and-dimensionality Wilcoxon table with reviewer-facing column
       names: function, variables, baseline, N, W, p_raw, p_holm, r, significant
 
-  significance_friedman_omnibus.csv / significance_friedman_posthoc_export.csv
-      Friedman omnibus (chi_square, df, N, p) and post-hoc (baseline, W, p_holm, r,
-      significant).
+  significance_friedman_posthoc_export.csv
+      Friedman post-hoc (baseline, W, p_holm, r, significant). The Friedman omnibus
+      statistics are written by analyze_ga_results_from_csv.generate_results as
+      significance_friedman_omnibus.csv; this module deliberately does not write that
+      file, so every output in output/ has exactly one producer.
 
-Usage:
+These exports run automatically at the end of a normal experiment (see
+research_experiment.py -> generate_results), reusing the run-level frames the
+significance tests already computed. Run this module directly only to re-export an
+existing session without repeating the experiment:
+
     python -m research_experiments.utils.export_run_level_data --session results/<timestamp>
 """
 from __future__ import annotations
@@ -79,9 +85,15 @@ def _stop_generations(csv_dir: str) -> pd.DataFrame:
     return out[["function", "number_of_variables", "saturation", "strategy", "run", "stop_generation"]]
 
 
-def build_per_run_table(csv_dir: str) -> pd.DataFrame:
-    """Tidy per-run minimum fitness, with stop generation where available."""
-    mins = load_run_level_minima(csv_dir)
+def build_per_run_table(csv_dir: str, mins: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Tidy per-run minimum fitness, with stop generation where available.
+
+    `mins` may be a frame already produced by load_run_level_minima(csv_dir); passing
+    it avoids a second full read of the runs_*.csv files, which are the bulk of a
+    session (gigabytes at paper-replication run counts).
+    """
+    if mins is None:
+        mins = load_run_level_minima(csv_dir)
     if mins.empty:
         return mins
 
@@ -138,11 +150,30 @@ def build_comparison_summary(per_run: pd.DataFrame, threshold: float = TAIL_THRE
     return pd.DataFrame(rows)
 
 
-def export_session(session_dir: str, threshold: float = TAIL_THRESHOLD) -> dict[str, str]:
-    csv_dir = os.path.join(session_dir, "csv")
-    out_dir = os.path.join(session_dir, "output")
+def export_run_level_outputs(
+    csv_dir: str,
+    out_dir: str,
+    threshold: float = TAIL_THRESHOLD,
+    run_df: pd.DataFrame | None = None,
+    wilcoxon_df: pd.DataFrame | None = None,
+    friedman_result: dict | None = None,
+) -> dict[str, str]:
+    """Write the reviewer-facing exports for one session.
+
+    `run_df`, `wilcoxon_df` and `friedman_result` are the frames the significance
+    tests produce. The pipeline has already computed all three by the time it calls
+    this, so it passes them in; when they are None they are computed here, which is
+    what the --session command line path does.
+
+    Returns {key: path} for the files written, or {} when there is no run-level data.
+    """
     os.makedirs(out_dir, exist_ok=True)
     written: dict[str, str] = {}
+
+    if run_df is None:
+        run_df = load_run_level_minima(csv_dir)
+    if run_df.empty:
+        return written
 
     # 1. Per-run tidy table.
     # Written with pandas' default float repr, which is the shortest text that
@@ -152,7 +183,7 @@ def export_session(session_dir: str, threshold: float = TAIL_THRESHOLD) -> dict[
     # pandas' default CSV parser is off by up to one ULP, which is numerically
     # irrelevant but flips exact ties (diff == 0) on functions where both strategies
     # reach the same optimum, and therefore perturbs the Wilcoxon W.
-    per_run = build_per_run_table(csv_dir)
+    per_run = build_per_run_table(csv_dir, mins=run_df)
     p = os.path.join(out_dir, "per_run_min_fitness.csv")
     per_run.to_csv(p, index=False)
     written["per_run"] = p
@@ -164,8 +195,7 @@ def export_session(session_dir: str, threshold: float = TAIL_THRESHOLD) -> dict[
     written["summary"] = p
 
     # 3. Wilcoxon, reviewer-facing column names
-    mins = load_run_level_minima(csv_dir)
-    wil = wilcoxon_signed_rank_per_function_dimension(mins)
+    wil = wilcoxon_df if wilcoxon_df is not None else wilcoxon_signed_rank_per_function_dimension(run_df)
     wil_export = wil.rename(columns={
         "number_of_variables": "variables",
         "compare_to": "baseline",
@@ -179,19 +209,12 @@ def export_session(session_dir: str, threshold: float = TAIL_THRESHOLD) -> dict[
     wil_export.to_csv(p, index=False)
     written["wilcoxon"] = p
 
-    # 4. Friedman omnibus + post-hoc
-    merged_csv = os.path.join(csv_dir, "_final_results_merged.csv")
-    fr = friedman_test_suite(pd.read_csv(merged_csv))
-    p = os.path.join(out_dir, "significance_friedman_omnibus.csv")
-    pd.DataFrame([{
-        "chi_square": fr["statistic"],
-        "df": fr.get("df"),
-        "n_functions": fr["n_functions"],
-        "k_strategies": fr["k_strategies"],
-        "p_value": fr["p_value"],
-        "significant": fr["significant"],
-    }]).to_csv(p, index=False)
-    written["friedman_omnibus"] = p
+    # 4. Friedman post-hoc, reviewer-facing column names.
+    # The omnibus row is written by generate_results; see the module docstring.
+    fr = friedman_result
+    if fr is None:
+        merged_csv = os.path.join(csv_dir, "_final_results_merged.csv")
+        fr = friedman_test_suite(pd.read_csv(merged_csv))
 
     ph = fr["post_hoc"].rename(columns={
         "compare_to": "baseline",
@@ -208,6 +231,15 @@ def export_session(session_dir: str, threshold: float = TAIL_THRESHOLD) -> dict[
     return written
 
 
+def export_session(session_dir: str, threshold: float = TAIL_THRESHOLD) -> dict[str, str]:
+    """Re-export one finished session folder, laid out as <session>/{csv,output}."""
+    return export_run_level_outputs(
+        csv_dir=os.path.join(session_dir, "csv"),
+        out_dir=os.path.join(session_dir, "output"),
+        threshold=threshold,
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description="Export per-run and significance data for one session.")
     ap.add_argument("--session", required=True, help="Session folder, e.g. results/2026_08_21_09_09_34_134")
@@ -215,6 +247,9 @@ def main():
     args = ap.parse_args()
 
     written = export_session(args.session, args.threshold)
+    if not written:
+        print(f"No runs_*.csv raw data found in {os.path.join(args.session, 'csv')}; nothing exported.")
+        return
     print("Wrote:")
     for k, v in written.items():
         print(f" - {v}")

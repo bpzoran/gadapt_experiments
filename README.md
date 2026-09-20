@@ -88,6 +88,7 @@ GeneticAlgorithmExperiments/
 │       ├── data_aggregation.py
 │       ├── plot_fitness_per_generation.py
 │       ├── experiment_utils.py
+│       ├── export_run_level_data.py
 │       └── significance.py
 └── results/                         # Default output directory (logs, csv, plots)
 ```
@@ -289,7 +290,12 @@ results/
     │   ├── GA_comparison_AFI_REC_AUCC.docx
     │   ├── rel_improvements_*.csv
     │   ├── significance_wilcoxon_per_function_dim.csv
+    │   ├── significance_friedman_omnibus.csv
     │   ├── significance_friedman_posthoc.csv
+    │   ├── per_run_min_fitness.csv          # tidy per-run minima (archival)
+    │   ├── per_run_summary_by_comparison.csv
+    │   ├── significance_wilcoxon_export.csv         # reviewer-facing column names
+    │   ├── significance_friedman_posthoc_export.csv
     │   ├── charts_standard/
     │   └── charts_custom/
     ├── csv/                 # Per-run CSVs, aggregated data, merged results
@@ -313,6 +319,34 @@ The generated report `output/GA_comparison_AFI_REC_AUCC.docx` includes a
 All reported p-values are Holm-Bonferroni adjusted for multiple comparisons
 (α = 0.05), and effect sizes are given as the matched-pairs rank-biserial
 correlation. The same results are also written as standalone CSVs in `output/`.
+
+### Per-run data export
+
+The same analysis step also writes machine-readable per-run data, so every statistic
+in the report can be recomputed without re-running the experiment:
+
+- **`per_run_min_fitness.csv`** — one row per (function, dimension, saturation,
+  strategy, run) with the run's minimum fitness and stop generation. This is the raw
+  material behind every significance statistic, produced by the same loader the tests
+  use, so it is traceable by construction rather than by transcription.
+- **`per_run_summary_by_comparison.csv`** — per (function × dimension × baseline):
+  median and mean minimum fitness for each strategy, the Diversity-vs-baseline win
+  rate, tie count, and tail counts above a fixed threshold.
+- **`significance_wilcoxon_export.csv`** / **`significance_friedman_posthoc_export.csv`**
+  — the significance tables with reviewer-facing column names
+  (`function, variables, baseline, N, W, p_raw, p_holm, r, significant`).
+
+When reproducing the statistics from `per_run_min_fitness.csv`, read it with
+`pd.read_csv(path, float_precision="round_trip")`. Pandas' default parser is off by
+up to one ULP, which is numerically irrelevant but flips exact ties on functions where
+two strategies reach the same optimum, and therefore perturbs the Wilcoxon *W*.
+
+These exports run automatically as part of every experiment. To regenerate them for a
+session that has already finished — without repeating the run:
+
+```bash
+python -m research_experiments.utils.export_run_level_data --session results/<timestamp>
+```
 
 ## Requirements
 
