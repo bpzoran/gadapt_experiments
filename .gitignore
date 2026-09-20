@@ -1,0 +1,9 @@
+/venv/
+results/*
+*.pyc
+.idea/*
+.venv/*
+.qodo/*
+.claude/*
+.DS_Store
+CLAUDE.md
