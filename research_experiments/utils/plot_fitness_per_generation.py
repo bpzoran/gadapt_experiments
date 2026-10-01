@@ -16,6 +16,19 @@ import numpy as np
 
 from research_experiments.utils.experiment_utils import transform_function_string
 
+# Fixed figure geometry (inches) shared by every plot: the axes box has the same size in all
+# images, regardless of tick labels, legends or annotations. Text that does not fit in the
+# axes (e.g. "Avg gen = ...") spills into the margins instead of resizing the plot.
+FIG_W, FIG_H = 8.7, 6.2
+AX_LEFT, AX_BOTTOM, AX_W, AX_H = 1.0, 1.2, 6.4, 4.4
+
+
+def _fixed_figure_and_axes():
+    fig = plt.figure(figsize=(FIG_W, FIG_H))
+    ax = fig.add_axes([AX_LEFT / FIG_W, AX_BOTTOM / FIG_H, AX_W / FIG_W, AX_H / FIG_H])
+    return fig, ax
+
+
 def compute_afi_percent(metrics_by_strategy, baseline, ref="diversity mutation", eps=1e-12):
     """
     AFI (%) = ((f_base_min - f_div_min) / (f_first - f_div_min)) * 100
@@ -105,13 +118,9 @@ def plot_convergence_curve(
         x0_map = {k: float(v) for k, v in x0.items()}
 
     # --- Figure with a caption row ---
-    fig = plt.figure(constrained_layout=True)
-    gs = fig.add_gridspec(2, 1, height_ratios=[12, 1])
-    ax = fig.add_subplot(gs[0, 0])
+    fig, ax = _fixed_figure_and_axes()
     ax.xaxis.labelpad = 6
-    cap_ax = fig.add_subplot(gs[1, 0])
-    cap_ax.axis('off')
-    cap_ax.text(0.5, 0.5, description, ha='center', va='center', wrap=True)
+    fig.text((AX_LEFT + AX_W / 2) / FIG_W, 0.3 / FIG_H, description, ha='center', va='center')
 
     # Global limits
     xpad_left = round(len_border / 20)
@@ -233,7 +242,7 @@ def plot_convergence_curve(
     # --- Diagnostic plot: #runs per generation for all series ---
     fig2, ax2 = None, None
     if annotate_counts:
-        fig2, ax2 = plt.subplots()
+        fig2, ax2 = _fixed_figure_and_axes()
         ax2.set_xlim(0 - xpad_left, max_len)
         ax2.set_xlabel("Generation")
         ax2.set_ylabel("# runs contributing")
@@ -253,8 +262,7 @@ def plot_convergence_curve(
                 ax2.axvline(x0_val, **{**vk, "color": c})
 
         ax2.legend()
-        fig2.subplots_adjust(bottom=0.22)
-        fig2.text(0.5, 0.04, description, ha="center", va="bottom", wrap=True)
+        fig2.text((AX_LEFT + AX_W / 2) / FIG_W, 0.3 / FIG_H, description, ha="center", va="center")
 
     # --- Save or Show ---
     if save:
@@ -267,14 +275,14 @@ def plot_convergence_curve(
         # main figure
         for ext in formats:
             path = os.path.join(outdir_final, f"{safe_base}.{ext.lstrip('.')}")
-            fig.savefig(path, dpi=200, bbox_inches="tight")
+            fig.savefig(path, dpi=300)
             saved_paths.append(path)
 
         # diagnostic figure
         if annotate_counts and fig2 is not None:
             for ext in formats:
                 path = os.path.join(outdir_final, f"{safe_base}_counts.{ext.lstrip('.')}")
-                fig2.savefig(path, dpi=200, bbox_inches="tight")
+                fig2.savefig(path, dpi=300)
                 saved_paths.append(path)
                 try:
                     import csv

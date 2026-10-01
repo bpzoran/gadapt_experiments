@@ -18,14 +18,18 @@ Usage:
 """
 import argparse
 import os
+import re
 import sys
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 from research_experiments.utils.experiment_utils import get_fitness_range
 from research_experiments.utils.plot_fitness_per_generation import plot_convergence_curve
 
+_NAME_RE = re.compile(r"^(?P<func>.+?) \((?P<nvars>\d+) Variables, Saturation = (?P<sat>\d+)\)$")
 AGG_PREFIX = "aggregated_data_"
 FINAL_PREFIX = "final_results_"
 
@@ -55,6 +59,41 @@ def _load_summary(path: str) -> dict[str, dict[str, float]]:
         }
         for _, row in df.iterrows()
     }
+
+
+def combine_per_function(plot_paths: list[str], outdir: str) -> list[str]:
+    """
+    Stack the per-experiment PNGs of each function (same name and saturation) into one image:
+    fewest variables on top, most at the bottom. Panels keep their native resolution; narrower
+    panels are centred on a white background. Functions with a single dimension are skipped.
+    """
+    groups: dict[tuple[str, str], list[tuple[int, str]]] = defaultdict(list)
+    for path in plot_paths:
+        base = os.path.basename(path)
+        if not base.lower().endswith(".png") or base.endswith("_counts.png"):
+            continue
+        m = _NAME_RE.match(base[:-len(".png")])
+        if m:
+            groups[(m["func"], m["sat"])].append((int(m["nvars"]), path))
+
+    saved: list[str] = []
+    for (func, sat), items in sorted(groups.items()):
+        if len(items) < 2:
+            continue
+        items.sort()
+        images = [Image.open(path).convert("RGB") for _, path in items]
+        width = max(im.width for im in images)
+        canvas = Image.new("RGB", (width, sum(im.height for im in images)), "white")
+        y = 0
+        for im in images:
+            canvas.paste(im, ((width - im.width) // 2, y))
+            y += im.height
+        nvars = ", ".join(str(n) for n, _ in items)
+        out = os.path.join(outdir, f"{func} ({nvars} Variables, Saturation = {sat}).png")
+        canvas.save(out, dpi=(300, 300))
+        saved.append(out)
+        print(f"Combined {os.path.basename(out)}")
+    return saved
 
 
 def regenerate_plots(csv_dir: str, outdir: str, x_max: float | None = None,
@@ -106,6 +145,7 @@ def regenerate_plots(csv_dir: str, outdir: str, x_max: float | None = None,
             x_max=x_max,
         )
         print(f"Plotted {name}")
+    saved += combine_per_function(saved, outdir)
     return saved
 
 
