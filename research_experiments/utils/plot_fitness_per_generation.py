@@ -72,6 +72,7 @@ def plot_convergence_curve(
     basename: str = "convergence",
     formats: tuple[str, ...] = ("png",),
     metrics_by_strategy: dict | None = None,
+    x_max: float | None = None,
 ):
     """
     agg:
@@ -87,7 +88,10 @@ def plot_convergence_curve(
       of saved file paths. If save=False, figures are shown and [] is returned.
     """
     description = transform_function_string(description)
-    len_border = round(max(x0.values())) + 1
+    # x-axis spans the generation cap shared by all experiments (x_max) when given, so plots are
+    # comparable across functions; otherwise the longest curve of any series in this plot.
+    max_len = max(max_len, x_max) if x_max is not None else max_len
+    len_border = round(max_len)
 
     # Normalize to multi-series dict: label -> series_dict
     is_single = isinstance(agg, dict) and {"gen", "center", "lower", "upper"} <= set(agg.keys())

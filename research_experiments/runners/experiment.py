@@ -334,7 +334,8 @@ class Experiment:
                                    outdir=app_settings.plot_path,
                                    save=app_settings.log_to_file,
                                    basename=self.experiment_name,
-                                   metrics_by_strategy=ga_summary)
+                                   metrics_by_strategy=ga_summary,
+                                   x_max=app_settings.number_of_generations)
 
 
 def analyze_runs(runs: dict[str, dict[str, np.ndarray]]):
