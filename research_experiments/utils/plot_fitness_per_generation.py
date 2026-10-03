@@ -19,8 +19,11 @@ from research_experiments.utils.experiment_utils import transform_function_strin
 # Fixed figure geometry (inches) shared by every plot: the axes box has the same size in all
 # images, regardless of tick labels, legends or annotations. Text that does not fit in the
 # axes (e.g. "Avg gen = ...") spills into the margins instead of resizing the plot.
-FIG_W, FIG_H = 8.7, 6.2
-AX_LEFT, AX_BOTTOM, AX_W, AX_H = 1.0, 1.2, 6.4, 4.4
+FIG_W, FIG_H = 8.7, 6.7
+AX_LEFT, AX_BOTTOM, AX_W, AX_H = 1.0, 1.7, 6.4, 4.4
+
+
+STRATEGY_ORDER = ("differential evolution", "random mutation", "diversity mutation", "adaptive mutation")
 
 
 def _fixed_figure_and_axes():
@@ -69,12 +72,12 @@ def compute_afi_percent(metrics_by_strategy, baseline, ref="diversity mutation",
 def plot_convergence_curve(
     agg,
     x0,
-    lowest: float,
-    highest: float,
-    max_len: float,
+    lowest: float | None = None,
+    highest: float | None = None,
+    max_len: float | None = None,
     #description: str = "GA Convergence (central tendency ± variability)",
     description: str = "GA Convergence (central tendency)",
-    ylabel: str = "Fitness",
+    ylabel: str | None = None,
     xlabel: str = "Generation",
     annotate_counts: bool = True,  # plot diagnostic figure with #runs per generation
     vline_kw: dict | None = None,
@@ -86,6 +89,8 @@ def plot_convergence_curve(
     formats: tuple[str, ...] = ("png",),
     metrics_by_strategy: dict | None = None,
     x_max: float | None = None,
+    gap_floor: float | None = None,
+    gap_label: str = "Gap to optimum f \u2212 f*",
 ):
     """
     agg:
@@ -95,12 +100,24 @@ def plot_convergence_curve(
       - single: float
       - multi:  {label: float}
 
+    Y axis:
+      - gap_floor=None: linear fitness axis spanning [lowest, highest].
+      - gap_floor=<float>: `agg` holds the gap to the optimum (see aggregate_gap_convergence),
+        drawn on a log axis whose lower limit is derived from the data (never below gap_floor).
+        `gap_label` names the quantity on the axis.
+
     Saving:
       If save=True, figures are saved to `outdir` using `basename` and `formats`
       (e.g., basename.png, basename_counts.png) and not shown. Returns the list
       of saved file paths. If save=False, figures are shown and [] is returned.
     """
     description = transform_function_string(description)
+    log_gap = gap_floor is not None
+    if max_len is None:
+        series = [agg] if "gen" in agg else list(agg.values())
+        max_len = max((len(s["gen"]) for s in series), default=0)
+    if not log_gap and (lowest is None or highest is None):
+        raise ValueError("lowest and highest are required for a linear y-axis (gap_floor=None).")
     # x-axis spans the generation cap shared by all experiments (x_max) when given, so plots are
     # comparable across functions; otherwise the longest curve of any series in this plot.
     max_len = max(max_len, x_max) if x_max is not None else max_len
@@ -114,7 +131,9 @@ def plot_convergence_curve(
     else:
         if not isinstance(x0, dict):
             raise TypeError("When agg contains multiple series, x0 must be a dict keyed like agg.")
-        series_dict = agg
+        # fixed strategy order so every strategy keeps the same colour in all plots
+        order = {name: i for i, name in enumerate(STRATEGY_ORDER)}
+        series_dict = dict(sorted(agg.items(), key=lambda kv: order.get(kv[0], len(order))))
         x0_map = {k: float(v) for k, v in x0.items()}
 
     # --- Figure with a caption row ---
@@ -124,12 +143,23 @@ def plot_convergence_curve(
 
     # Global limits
     xpad_left = round(len_border / 20)
-    ypad_bottom = (highest - lowest) / 20 if highest != lowest else 1.0
     ax.set_xlim(0 - xpad_left, len_border)
-    ax.set_ylim(lowest - ypad_bottom, highest + ypad_bottom)
+    if log_gap:
+        centers = np.concatenate([np.asarray(s["center"], dtype=float) for s in series_dict.values()])
+        uppers = np.concatenate([np.asarray(s["upper"], dtype=float) for s in series_dict.values()])
+        y_lo = max(np.nanmin(centers) / 3.0, gap_floor / 10.0)
+        y_hi = max(np.nanmax(uppers), np.nanmax(centers)) * 3.0
+        ax.set_yscale("log")
+        ax.set_ylim(y_lo, y_hi)
+        ylabel = ylabel or f"{gap_label} (log scale)"
+        ax.set_title("GA Convergence (mean gap to optimum)")
+    else:
+        ypad_bottom = (highest - lowest) / 20 if highest != lowest else 1.0
+        ax.set_ylim(lowest - ypad_bottom, highest + ypad_bottom)
+        ylabel = ylabel or "Fitness"
+        ax.set_title("GA Convergence (central tendency)")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_title("GA Convergence (central tendency)")
 
     # --- Shade the REC window: first n = 25% of the smallest avg-generations ---
     min_avg_gens = min(x0_map.values()) if x0_map else None
@@ -148,7 +178,7 @@ def plot_convergence_curve(
 
     # Plot all series; store colors and x0 for stacked annotations later
     colors_by_label: dict[str, str] = {}
-    vline_info: list[tuple[str, float, str]] = []  # (label, x0_val, color)
+    vline_info: list[tuple[str, float, str]] = []  # (label, line x position, color)
 
     for label, s in series_dict.items():
         gen = np.asarray(s["gen"], dtype=float)
@@ -180,40 +210,30 @@ def plot_convergence_curve(
                 ax.axvline(x0_val, **{**vk, "color": line_color})
                 vline_info.append((label, x0_val, line_color))
 
-        # After plotting each strategy's main line:
-        final_x0 = float(gen[-1])  # that series' last available generation
-        final_y = float(center[-1])  # that series' final mean
 
-        # draw a short dotted segment to the right, e.g., +5% of the axis span but capped
-        x_left = final_x0 - 0.02 * (ax.get_xlim()[1] - ax.get_xlim()[0])
-        x_right = final_x0 + 0.02 * (ax.get_xlim()[1] - ax.get_xlim()[0])
-        # ensure we don't overshoot the axis
-        x_left = max(x_left, ax.get_xlim()[0])
-        x_right = min(x_right, ax.get_xlim()[1])
-
-        ax.hlines(final_y, x_left, x_right, linestyles='dotted', linewidth=1.5, color=line_color)
-
-
-    ax.legend()
+    # legend in a row below the axes so it never covers curves or labels
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.16), ncol=4, fontsize=9, frameon=False,
+              columnspacing=1.2, handlelength=1.6)
 
     # ---- Stack "Avg gen =" annotations so they don't overlap ----
+    # Labels show the average generation count as reported in the results tables (x0); the dashed
+    # line sits one generation earlier because generations are plotted 0-based.
     if vline_info:
         vline_info.sort(key=lambda t: t[1])  # left -> right
-        y_min, y_max = ax.get_ylim()
-        y_range = y_max - y_min
         top_anchor_frac = 0.95
         stack_band_frac = 0.25
         n = len(vline_info)
         dy_frac = stack_band_frac / max(n, 1)
+        x_min, x_max_ax = ax.get_xlim()
 
         for i, (label, x0_val, color) in enumerate(vline_info):
-            y_text = y_min + (top_anchor_frac - i * dy_frac) * y_range
-            x_min, x_max = ax.get_xlim()
-            place_left = x0_val > (x_min + 0.85 * (x_max - x_min))
+            y_frac = top_anchor_frac - i * dy_frac
+            place_left = x0_val > (x_min + 0.85 * (x_max_ax - x_min))
             dx = -6 if place_left else 6
-            ax.annotate(f"Avg gen = {round(x0_val):g}",
-                        xy=(x0_val, y_text), xytext=(dx, 0),
-                        textcoords='offset points',
+            # y in axes-fraction so the stacking also works on a log axis
+            ax.annotate(f"Avg gen = {round(x0_map[label]):g}",
+                        xy=(x0_val, y_frac), xycoords=("data", "axes fraction"),
+                        xytext=(dx, 0), textcoords='offset points',
                         color=color, ha='left', va='center')
     afi_vs_adaptive = compute_afi_percent(metrics_by_strategy, baseline="adaptive mutation")
     afi_vs_random = compute_afi_percent(metrics_by_strategy, baseline="random mutation")
@@ -245,8 +265,8 @@ def plot_convergence_curve(
         fig2, ax2 = _fixed_figure_and_axes()
         ax2.set_xlim(0 - xpad_left, max_len)
         ax2.set_xlabel("Generation")
-        ax2.set_ylabel("# runs contributing")
-        ax2.set_title("Contributing runs per generation")
+        ax2.set_ylabel("# runs still running")
+        ax2.set_title("Runs still running per generation")
 
         for label, s in series_dict.items():
             gen = np.asarray(s["gen"], dtype=float)

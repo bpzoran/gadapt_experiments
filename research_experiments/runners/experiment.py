@@ -8,7 +8,7 @@ from gadapt.ga import GA
 
 from research_experiments.plugins.pygad.pygad_blending_crossover import blend_crossover_pygad
 from research_experiments.utils import csv_writter
-from research_experiments.utils.data_aggregation import aggregate_convergence
+from research_experiments.utils.data_aggregation import aggregate_convergence, aggregate_gap_convergence, resolve_optimum, GAP_FLOOR
 from research_experiments.utils.exp_logging import log_message_info
 from research_experiments.runners.gadapt_experiment import execute_gadapt_experiment
 from research_experiments.runners.pygad_experiment import execute_pygad_experiment
@@ -323,19 +323,28 @@ class Experiment:
             csv_writter.runs_to_csv(min_cost_per_generations_per_run_per_mutation_type, experiment_name=transform_function_string(self.experiment_name))
             csv_writter.export_ga_summary_to_csv(ga_summary, file_name=transform_function_string(self.experiment_name), experiment_name=transform_function_string(self._experiment_name), number_of_variables=len(self._args_bounds), saturation_generations=self.app_settings.saturation_criteria)
         if self.app_settings.plot_fitness:
-            lowest, highest, max_len = analyze_runs(runs)
-            fitness_range = get_fitness_range(final_results, lowest, highest)
-            plot_convergence_curve(agg=runs,
-                                   x0=average_generations,
-                                   lowest=fitness_range[0],
-                                   highest=fitness_range[1],
-                                   max_len=max_len,
+            # Curves for the plot: every run contributes at every generation (stopped runs keep their
+            # final value), expressed as gap to the optimum for a log axis.
+            n_vars = len(self._args_bounds)
+            x_max = app_settings.number_of_generations
+            f_star, f_star_known = resolve_optimum(self._experiment_name, min_cost_per_generations_per_run_per_mutation_type, n_vars)
+            plot_runs = {
+                strategy: aggregate_gap_convergence(
+                    strategy_runs, x_max, f_star,
+                    stat=self.app_settings.plot_stat, band=self.app_settings.plot_band)
+                for strategy, strategy_runs in min_cost_per_generations_per_run_per_mutation_type.items()
+            }
+            plot_convergence_curve(agg=plot_runs,
+                                   # average generations exactly as reported in final_results
+                                   x0={strategy: m["avg_generations"] for strategy, m in ga_summary.items()},
                                    description=self.experiment_name,
                                    outdir=app_settings.plot_path,
                                    save=app_settings.log_to_file,
                                    basename=self.experiment_name,
                                    metrics_by_strategy=ga_summary,
-                                   x_max=app_settings.number_of_generations)
+                                   x_max=x_max,
+                                   gap_floor=GAP_FLOOR,
+                                   gap_label="Gap to optimum f \u2212 f*" if f_star_known else "Gap to best found")
 
 
 def analyze_runs(runs: dict[str, dict[str, np.ndarray]]):
