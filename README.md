@@ -87,6 +87,7 @@ GeneticAlgorithmExperiments/
 │       ├── analyze_ga_results_from_csv.py
 │       ├── data_aggregation.py
 │       ├── plot_fitness_per_generation.py
+│       ├── plot_from_csv.py
 │       ├── experiment_utils.py
 │       ├── export_run_level_data.py
 │       └── significance.py
@@ -303,6 +304,44 @@ results/
     └── plot/                # Convergence and fitness plots
 ```
 
+### Convergence plots
+
+Each experiment gets a convergence plot (`<experiment>.png`, 300 dpi) and a
+`_counts.png` diagnostic. All plots share the same image size, axes size and x-axis
+range (`0..number_of_generations`), so they can be compared directly; extra text such
+as the "Avg gen" labels is placed outside the axes box instead of resizing it.
+
+- **Curves** show the mean best-so-far fitness over **all** runs at each generation.
+  A run that stops early keeps its final value for the rest of the range, so the end of
+  each curve equals the average minimum fitness in `final_results_*.csv`. (Averaging only
+  the runs still running would let early-stopping runs drop out and make a strategy's
+  tail look better than it is.) The `_counts.png` plot shows how many runs are still
+  running at each generation.
+- **Y axis** is the gap to the optimum, `f − f*`, on a log scale, clipped at a floor of
+  `1e-16` so runs that reach the optimum exactly can be drawn. `f*` is known for the
+  benchmark functions (0, or −39.16616570377142 × *d* for Styblinski–Tang). For functions
+  without a known optimum the gap is measured from the best value found in any run and
+  the axis is labelled "Gap to best found".
+- **Grey shading** marks the window used for the Relative Early Convergence (REC)
+  metric; **dashed vertical lines** mark each strategy's average number of generations,
+  labelled with the same `avg_generations` value reported in `final_results_*.csv`.
+- **AFI box** in the corner gives the Adjusted Fitness Improvement of the diversity
+  mutation against each baseline.
+
+To regenerate the plots of a finished session from its CSV files, without re-running
+the experiments (needs the `runs_*.csv`, `final_results_*.csv` and `aggregated_data_*.csv`
+files in the session's `csv/` folder):
+
+```bash
+python -m research_experiments.utils.plot_from_csv --csv-dir results/<timestamp>/csv
+```
+
+Plots are written to `results/<timestamp>/plot_regenerated/` (change with `--outdir`;
+`--x-max`, `--floor` and `--formats` are also available). In addition to the
+per-experiment plots, it writes one combined image per function that was run with
+several numbers of variables (e.g. `Ackley Function (2, 7, 20 Variables, Saturation = 20).png`),
+with the fewest variables on top and the most at the bottom.
+
 ### Statistical Significance
 
 The generated report `output/GA_comparison_AFI_REC_AUCC.docx` includes a
@@ -357,6 +396,7 @@ python -m research_experiments.utils.export_run_level_data --session results/<ti
 - numpy==1.26.4
 - scipy==1.17.1
 - gadapt==0.4.30
+- matplotlib==3.11.2
 
 Supported platforms: macOS, Linux (via `run`) and Windows (via `run.ps1`).
 The Windows launcher requires Windows PowerShell 5.1 or PowerShell 7+, both of which
