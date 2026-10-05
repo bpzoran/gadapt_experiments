@@ -193,12 +193,10 @@ class Experiment:
                     max_attempt_no=self.app_settings.saturation_criteria,
                     number_of_generations=self.app_settings.number_of_generations,
                     parent_selection="roulette_wheel",
-                    max_attempt_no_for_step_decrease=10,
                     immigration_number=1,
                     crossover_probability=0.5,
                     crossover="blending, cross_diversity, cost_diversity",
                     ensure_unique_individuals=False,
-                    decrease_step_automatically=False,
                     logging=False)
 
             # Addition of variables with specified ranges and steps
@@ -239,12 +237,10 @@ class Experiment:
                     max_attempt_no=self.app_settings.saturation_criteria,
                     number_of_generations=self.app_settings.number_of_generations,
                     parent_selection="roulette_wheel",
-                    max_attempt_no_for_step_decrease=10,
                     crossover_probability=0.5,
                     immigration_number=0,
                     crossover="blending",
                     ensure_unique_individuals = False,
-                    decrease_step_automatically = False,
                     logging=False)
 
             # Addition of variables with specified ranges and steps
