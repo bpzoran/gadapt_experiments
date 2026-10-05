@@ -17,7 +17,7 @@ class ExperimentGASettings:
         logging_step: int = 50,
         percentage_of_generations_for_performance: float = 0.25,
         plot_fitness: bool = True,
-        saturation_criteria: int = 15,
+        saturation_criteria: int = 20,
         number_of_generations: int = 600,
         gadapt_random_mutation_enabled: bool = False,
         pygad_random_mutation_enabled: bool = True,
