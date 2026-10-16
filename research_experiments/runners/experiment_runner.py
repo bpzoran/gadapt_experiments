@@ -25,8 +25,10 @@ def run_experiment(experiment: Callable) -> None:
     parser.add_argument("--number_of_generations", type=int, help="Number of generations")
 
     # Floats
-    parser.add_argument("--percentage_of_mutation_chromosomes", type=float, help="Percentage of mutation chromosomes")
-    parser.add_argument("--percentage_of_mutation_genes", type=float, help="Percentage of mutation genes")
+    parser.add_argument("--percentage_of_mutation_candidate_solutions", "--percentage_of_mutation_candidate_solutions", type=float,
+                        help="Percentage of mutation candidate solutions (--percentage_of_mutation_candidate_solutions is the previous name)")
+    parser.add_argument("--percentage_of_mutation_decision_variables", "--percentage_of_mutation_decision_variables", type=float,
+                        help="Percentage of mutation decision variables (--percentage_of_mutation_decision_variables is the previous name)")
     parser.add_argument("--mutation_ratio", type=float, help="Mutation ratio")
     parser.add_argument("--keep_elitism_percentage", type=float, help="Keep elitism percentage")
     parser.add_argument("--percentage_of_generations_for_performance", type=float, help="Percentage of generations for performance")
@@ -63,8 +65,8 @@ def run_experiment(experiment: Callable) -> None:
     if args.saturation_criteria is not None: app_settings.saturation_criteria = args.saturation_criteria
     if args.number_of_generations is not None: app_settings.number_of_generations = args.number_of_generations
     
-    if args.percentage_of_mutation_chromosomes is not None: app_settings.percentage_of_mutation_chromosomes = args.percentage_of_mutation_chromosomes
-    if args.percentage_of_mutation_genes is not None: app_settings.percentage_of_mutation_genes = args.percentage_of_mutation_genes
+    if args.percentage_of_mutation_candidate_solutions is not None: app_settings.percentage_of_mutation_candidate_solutions = args.percentage_of_mutation_candidate_solutions
+    if args.percentage_of_mutation_decision_variables is not None: app_settings.percentage_of_mutation_decision_variables = args.percentage_of_mutation_decision_variables
     if args.mutation_ratio is not None: app_settings.mutation_ratio = args.mutation_ratio
     if args.keep_elitism_percentage is not None: app_settings.keep_elitism_percentage = args.keep_elitism_percentage
     if args.percentage_of_generations_for_performance is not None: app_settings.percentage_of_generations_for_performance = args.percentage_of_generations_for_performance

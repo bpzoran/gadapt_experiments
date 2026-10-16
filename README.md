@@ -136,8 +136,8 @@ source run
 | `BASE_OUTPUT_DIR` | `results` | Base output directory for logs, CSVs, and plots |
 | `DIMENSIONS` | `(2 7 20)` | Dimensionalities to test |
 | `SATURATION_CRITERIAS` | `(20)` | Saturation criteria values |
-| `PERCENTAGE_OF_MUTATION_GENES` | `20` | Percentage of mutation genes |
-| `PERCENTAGE_OF_MUTATION_CHROMOSOMES` | `60` | Percentage of mutation chromosomes |
+| `PERCENTAGE_OF_MUTATION_DECISION_VARIABLES` | `20` | Percentage of mutation decision variables |
+| `PERCENTAGE_OF_MUTATION_CANDIDATE_SOLUTIONS` | `60` | Percentage of mutation candidate solutions |
 | `NUMBER_OF_GENERATIONS` | `600` | Number of generations |
 | `SCIPY_DE_ENABLED` | `true` | Enable SciPy Differential Evolution |
 | `PYGAD_ADAPTIVE_MUTATION_ENABLED` | `true` | Enable PyGAD adaptive mutation |
@@ -169,6 +169,10 @@ python -u research_experiment.py --num_runs 100 --population_size 64
 All arguments below can be passed to `run`, to `run.ps1`, or directly to
 `research_experiment.py`.
 
+The defaults listed below are those of `research_experiment.py` (see `ExperimentGASettings`). The launcher scripts pass
+their own values for some of them, see [Default Configuration](#default-configuration-in-run--runps1): `--num_runs`,
+`--saturation_criterias`, `--percentage_of_mutation_decision_variables` and `--base_output_dir`.
+
 ### Integers
 
 | Argument | Default | Description |
@@ -176,18 +180,23 @@ All arguments below can be passed to `run`, to `run.ps1`, or directly to
 | `--population_size` | `64` | Population size |
 | `--num_runs` | `1000` | Number of experiment runs |
 | `--logging_step` | `50` | Logging step interval |
-| `--saturation_criteria` | `15` | Saturation criteria |
+| `--saturation_criteria` | `20` | Saturation criteria |
 | `--number_of_generations` | `600` | Number of generations per run |
 
 ### Floats
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--percentage_of_mutation_chromosomes` | `60` | Percentage of chromosomes to mutate |
-| `--percentage_of_mutation_genes` | `20` | Percentage of genes to mutate |
+| `--percentage_of_mutation_candidate_solutions` | `60` | Percentage of candidate solutions to mutate |
+| `--percentage_of_mutation_decision_variables` | `60` | Percentage of decision variables to mutate |
 | `--mutation_ratio` | `0.1` | Mutation ratio |
 | `--keep_elitism_percentage` | `50.0` | Elitism percentage |
 | `--percentage_of_generations_for_performance` | `0.25` | Generations fraction for performance check |
+
+> **Renamed options.** Since GAdapt 0.5.0 uses the terms *candidate solution* and *decision variable* (formerly *chromosome* and *gene*),
+> `--percentage_of_mutation_chromosomes` is now `--percentage_of_mutation_candidate_solutions` and
+> `--percentage_of_mutation_genes` is now `--percentage_of_mutation_decision_variables`. The previous names are still accepted,
+> so commands from earlier versions keep working. The PyGAD arguments (`num_genes`, `mutation_percent_genes`, ...) keep PyGAD's own terminology.
 
 ### Booleans
 
@@ -212,14 +221,14 @@ Accepts `true`/`false`, `yes`/`no`, `1`/`0`.
 | `--csv_path` | None | Custom CSV output path |
 | `--results_path` | None | Custom results output path |
 | `--plot_path` | None | Custom plot output path |
-| `--base_output_dir` | `"results"` | Base output directory for all output files |
+| `--base_output_dir` | None | Base output directory for all output files (the current directory if not set) |
 
 ### Lists
 
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--variable_numbers` | `2 7 20` | Dimensionalities to test (space-separated) |
-| `--saturation_criterias` | `20` | Saturation criteria values (space-separated) |
+| `--saturation_criterias` | `15` | Saturation criteria values (space-separated) |
 | `--usecase` | all | Use cases to run (space-separated, e.g. `4 5`) |
 
 ### Available Use Cases
@@ -395,7 +404,7 @@ python -m research_experiments.utils.export_run_level_data --session results/<ti
 - pandas==2.3.3
 - numpy==1.26.4
 - scipy==1.17.1
-- gadapt==0.4.30
+- gadapt==0.5.0
 - matplotlib==3.11.2
 
 Supported platforms: macOS, Linux (via `run`) and Windows (via `run.ps1`).

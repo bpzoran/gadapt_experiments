@@ -9,8 +9,8 @@ class ExperimentGASettings:
     def __init__(
         self,
         population_size: int = 64,
-        percentage_of_mutation_chromosomes: float = 60,
-        percentage_of_mutation_genes: float = 60,
+        percentage_of_mutation_candidate_solutions: float = 60,
+        percentage_of_mutation_decision_variables: float = 60,
         mutation_ratio: float = 0.1,
         keep_elitism_percentage: float = 50.0,
         num_runs: int = 1000,
@@ -45,8 +45,8 @@ class ExperimentGASettings:
             saturation_criterias = [15]
         self._number_of_generations_ = number_of_generations
         self._population_size_ = None
-        self._percentage_of_mutation_chromosomes_ = None
-        self._percentage_of_mutation_genes_ = None
+        self._percentage_of_mutation_candidate_solutions_ = None
+        self._percentage_of_mutation_decision_variables_ = None
         self._mutation_ratio_ = None
         self._keep_elitism_percentage_ = None
         self._pygad_adaptive_mutation_enabled_ = None
@@ -63,8 +63,8 @@ class ExperimentGASettings:
         self._use_cases_ = None
 
         self._population_size = population_size
-        self._percentage_of_mutation_chromosomes = percentage_of_mutation_chromosomes
-        self._percentage_of_mutation_genes = percentage_of_mutation_genes
+        self._percentage_of_mutation_candidate_solutions = percentage_of_mutation_candidate_solutions
+        self._percentage_of_mutation_decision_variables = percentage_of_mutation_decision_variables
         self._mutation_ratio = mutation_ratio
         self._keep_elitism_percentage = keep_elitism_percentage
         self._num_runs = num_runs
@@ -95,8 +95,8 @@ class ExperimentGASettings:
 
     def backup_settings(self):
         self._population_size_ = self.population_size
-        self._percentage_of_mutation_chromosomes_ = self.percentage_of_mutation_chromosomes
-        self._percentage_of_mutation_genes_ = self.percentage_of_mutation_genes
+        self._percentage_of_mutation_candidate_solutions_ = self.percentage_of_mutation_candidate_solutions
+        self._percentage_of_mutation_decision_variables_ = self.percentage_of_mutation_decision_variables
         self._mutation_ratio_ = self.mutation_ratio
         self._keep_elitism_percentage_ = self.keep_elitism_percentage
         self._num_runs_ = self.num_runs
@@ -124,8 +124,8 @@ class ExperimentGASettings:
 
     def restore_settings(self):
         self.population_size = self._population_size_
-        self.percentage_of_mutation_chromosomes = self._percentage_of_mutation_chromosomes_
-        self.percentage_of_mutation_genes = self._percentage_of_mutation_genes_
+        self.percentage_of_mutation_candidate_solutions = self._percentage_of_mutation_candidate_solutions_
+        self.percentage_of_mutation_decision_variables = self._percentage_of_mutation_decision_variables_
         self.mutation_ratio = self._mutation_ratio_
         self.keep_elitism_percentage = self._keep_elitism_percentage_
         self.num_runs = self._num_runs_
@@ -162,24 +162,24 @@ class ExperimentGASettings:
         self._population_size = value
 
     @property
-    def percentage_of_mutation_chromosomes(self) -> float:
-        return self._percentage_of_mutation_chromosomes
+    def percentage_of_mutation_candidate_solutions(self) -> float:
+        return self._percentage_of_mutation_candidate_solutions
 
-    @percentage_of_mutation_chromosomes.setter
-    def percentage_of_mutation_chromosomes(self, value: float):
+    @percentage_of_mutation_candidate_solutions.setter
+    def percentage_of_mutation_candidate_solutions(self, value: float):
         if not (0.0 <= value <= 100.0):
-            raise ValueError("percentage_of_mutation_chromosomes must be between 0 and 100")
-        self._percentage_of_mutation_chromosomes = value
+            raise ValueError("percentage_of_mutation_candidate_solutions must be between 0 and 100")
+        self._percentage_of_mutation_candidate_solutions = value
 
     @property
-    def percentage_of_mutation_genes(self) -> float:
-        return self._percentage_of_mutation_genes
+    def percentage_of_mutation_decision_variables(self) -> float:
+        return self._percentage_of_mutation_decision_variables
 
-    @percentage_of_mutation_genes.setter
-    def percentage_of_mutation_genes(self, value: float):
+    @percentage_of_mutation_decision_variables.setter
+    def percentage_of_mutation_decision_variables(self, value: float):
         if not (0.0 <= value <= 100.0):
-            raise ValueError("percentage_of_mutation_genes must be between 0 and 100")
-        self._percentage_of_mutation_genes = value
+            raise ValueError("percentage_of_mutation_decision_variables must be between 0 and 100")
+        self._percentage_of_mutation_decision_variables = value
 
     @property
     def mutation_ratio(self) -> float:
@@ -413,8 +413,8 @@ class ExperimentGASettings:
         return (
             f"ExperimentGASettings("
             f"population_size={self.population_size}, "
-            f"percentage_of_mutation_chromosomes={self.percentage_of_mutation_chromosomes}, "
-            f"percentage_of_mutation_genes={self.percentage_of_mutation_genes}, "
+            f"percentage_of_mutation_candidate_solutions={self.percentage_of_mutation_candidate_solutions}, "
+            f"percentage_of_mutation_decision_variables={self.percentage_of_mutation_decision_variables}, "
             f"mutation_ratio={self.mutation_ratio}, "
             f"keep_elitism_percentage={self.keep_elitism_percentage}, "
             f"num_runs={self.num_runs}, "

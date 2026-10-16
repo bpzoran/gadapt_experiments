@@ -92,10 +92,10 @@ class Experiment:
         min_cost_per_generations_per_run_per_mutation_type: dict = {}
         average_generations: dict = {}
         app_settings = ExperimentGASettings()
-        # pygad_mutation_percentage_up = round(self.app_settings.percentage_of_mutation_chromosomes * (
-        #             self.app_settings.percentage_of_mutation_genes / 100))
+        # pygad_mutation_percentage_up = round(self.app_settings.percentage_of_mutation_candidate_solutions * (
+        #             self.app_settings.percentage_of_mutation_decision_variables / 100))
         pygad_mutation_percentage_up = round(50.0 * (
-                self.app_settings.percentage_of_mutation_genes / 100))
+                self.app_settings.percentage_of_mutation_decision_variables / 100))
         pygad_mutation_percentage_down = round(pygad_mutation_percentage_up * self.app_settings.mutation_ratio)
         if self.app_settings.scipy_de_enabled:
             ##### SCIPY DIFFERENTIAL EVOLUTION OPTIMIZATION ###############
@@ -170,10 +170,10 @@ class Experiment:
             # ga = GA(cost_function=self.f,
             #         population_size=self.app_settings.population_size,
             #         population_mutation="random",
-            #         chromosome_mutation="random",
-            #         gene_mutation="random",
-            #         percentage_of_mutation_chromosomes=self.app_settings.percentage_of_mutation_chromosomes,
-            #         percentage_of_mutation_genes=self.app_settings.percentage_of_mutation_genes,
+            #         candidate_solution_mutation="random",
+            #         decision_variable_mutation="random",
+            #         percentage_of_mutation_candidate_solutions=self.app_settings.percentage_of_mutation_candidate_solutions,
+            #         percentage_of_mutation_decision_variables=self.app_settings.percentage_of_mutation_decision_variables,
             #         exit_check="min_cost",
             #         number_of_generations=self.app_settings.number_of_generations,
             #         keep_elitism_percentage=self.app_settings.keep_elitism_percentage,
@@ -183,11 +183,11 @@ class Experiment:
             #         logging=False)
             ga = GA(cost_function=self.f,
                     population_size=self.app_settings.population_size,
-                    population_mutation="cost_diversity, cross_diversity, parent_diversity, random",
-                    chromosome_mutation="cross_diversity",
-                    gene_mutation="cross_diversity,cost_diversity,random",
-                    percentage_of_mutation_chromosomes=self.app_settings.percentage_of_mutation_chromosomes,
-                    percentage_of_mutation_genes=self.app_settings.percentage_of_mutation_genes,
+                    population_mutation="cost_diversity, variable_columnar_diversity, parent_diversity, random",
+                    candidate_solution_mutation="variable_columnar_diversity",
+                    decision_variable_mutation="variable_columnar_diversity,cost_diversity,random",
+                    percentage_of_mutation_candidate_solutions=self.app_settings.percentage_of_mutation_candidate_solutions,
+                    percentage_of_mutation_decision_variables=self.app_settings.percentage_of_mutation_decision_variables,
                     exit_check="min_cost",
                     keep_elitism_percentage=self.app_settings.keep_elitism_percentage,
                     max_attempt_no=self.app_settings.saturation_criteria,
@@ -195,7 +195,7 @@ class Experiment:
                     parent_selection="roulette_wheel",
                     immigration_number=1,
                     crossover_probability=0.5,
-                    crossover="blending, cross_diversity, cost_diversity",
+                    crossover="blending, variable_columnar_diversity, cost_diversity",
                     ensure_unique_individuals=False,
                     logging=False)
 
@@ -227,11 +227,11 @@ class Experiment:
 
             ga = GA(cost_function=self.f,
                     population_size=self.app_settings.population_size,
-                    population_mutation="cost_diversity, cross_diversity, parent_diversity, random",
-                    chromosome_mutation="cross_diversity, random",
-                    gene_mutation="cross_diversity,cost_diversity, random",
-                    percentage_of_mutation_chromosomes=self.app_settings.percentage_of_mutation_chromosomes,
-                    percentage_of_mutation_genes=self.app_settings.percentage_of_mutation_genes,
+                    population_mutation="cost_diversity, variable_columnar_diversity, parent_diversity, random",
+                    candidate_solution_mutation="variable_columnar_diversity, random",
+                    decision_variable_mutation="variable_columnar_diversity,cost_diversity, random",
+                    percentage_of_mutation_candidate_solutions=self.app_settings.percentage_of_mutation_candidate_solutions,
+                    percentage_of_mutation_decision_variables=self.app_settings.percentage_of_mutation_decision_variables,
                     exit_check="min_cost",
                     keep_elitism_percentage=self.app_settings.keep_elitism_percentage,
                     max_attempt_no=self.app_settings.saturation_criteria,
@@ -276,7 +276,7 @@ class Experiment:
                                 gene_space=self._args_bounds,
                                 fitness_func=self.fitness_func,
                                 #mutation_percent_genes=[pygad_mutation_percentage_up, pygad_mutation_percentage_down],
-                                #mutation_probability=[self.app_settings.percentage_of_mutation_genes / 100, 0.01],  # start high, end low
+                                #mutation_probability=[self.app_settings.percentage_of_mutation_decision_variables / 100, 0.01],  # start high, end low
                                 mutation_probability=[0.5, 0.01],
                                 # start high, end low
                                 mutation_percent_genes=[pygad_mutation_percentage_up, pygad_mutation_percentage_down],

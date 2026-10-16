@@ -6,8 +6,9 @@
  Windows counterpart of the `run` bash script. It executes the same
  reproduction pipeline with the same defaults.
 
- Default Configuration (Paper Replication):
- - 1000 runs (approx. 4 hours)
+ Default Configuration (quick demo):
+ - 10 runs
+ - For paper replication use 1000 runs (approx. 4 hours): .\run.ps1 --num_runs 1000
  - Default population/mutation settings defined in research_experiment.py
 
  Usage:
@@ -26,14 +27,14 @@ $ErrorActionPreference = 'Stop'
 # --- Configuration ---
 # Modify these variables to change the default behavior of the "Reproducible Run"
 
-$NUM_RUNS = 10        # Set to 10 for a quick demo, 1000 for paper replication
+$NUM_RUNS = 10        # Default: 10 runs (quick demo). Use 1000 for paper replication: .\run.ps1 --num_runs 1000
 $POP_SIZE = 64        # Default population size
 $RESULTS_DIR = "results"
 $BASE_OUTPUT_DIR = $RESULTS_DIR
 $DIMENSIONS = @(2, 7, 20)   # Default dimensions to test
 $SATURATION_CRITERIAS = @(20)
-$PERCENTAGE_OF_MUTATION_GENES = 20
-$PERCENTAGE_OF_MUTATION_CHROMOSOMES = 60
+$PERCENTAGE_OF_MUTATION_DECISION_VARIABLES = 20
+$PERCENTAGE_OF_MUTATION_CANDIDATE_SOLUTIONS = 60
 $NUMBER_OF_GENERATIONS = 600
 $SCIPY_DE_ENABLED = "true"
 $PYGAD_ADAPTIVE_MUTATION_ENABLED = "true"
@@ -70,8 +71,8 @@ try {
         --base_output_dir $BASE_OUTPUT_DIR `
         --variable_numbers $DIMENSIONS `
         --saturation_criterias $SATURATION_CRITERIAS `
-        --percentage_of_mutation_genes $PERCENTAGE_OF_MUTATION_GENES `
-        --percentage_of_mutation_chromosomes $PERCENTAGE_OF_MUTATION_CHROMOSOMES `
+        --percentage_of_mutation_decision_variables $PERCENTAGE_OF_MUTATION_DECISION_VARIABLES `
+        --percentage_of_mutation_candidate_solutions $PERCENTAGE_OF_MUTATION_CANDIDATE_SOLUTIONS `
         --number_of_generations $NUMBER_OF_GENERATIONS `
         --scipy_de_enabled $SCIPY_DE_ENABLED `
         --pygad_adaptive_mutation_enabled $PYGAD_ADAPTIVE_MUTATION_ENABLED `
@@ -98,13 +99,13 @@ Write-Host "Experiment complete. Results saved to $RESULTS_DIR"
 
  **Integers:**
    --population_size (default: 64)
-   --num_runs (default: 100)
+   --num_runs (default: 1000)
    --logging_step (default: 50)
-   --saturation_criteria (default: 15)
+   --saturation_criteria (default: 20)
 
  **Floats:**
-   --percentage_of_mutation_chromosomes (default: 60)
-   --percentage_of_mutation_genes (default: 60)
+   --percentage_of_mutation_candidate_solutions (default: 60)
+   --percentage_of_mutation_decision_variables (default: 60)
    --mutation_ratio (default: 0.1)
    --keep_elitism_percentage (default: 50.0)
    --percentage_of_generations_for_performance (default: 0.25)
@@ -121,11 +122,11 @@ Write-Host "Experiment complete. Results saved to $RESULTS_DIR"
    --plot_stat (default: "mean")
    --plot_band (default: "ci")
    --csv_path (default: None)
-   --base_output_dir (default: "results")
+   --base_output_dir (default: None, the current directory)
 
  **Lists:**
    --variable_numbers (space-separated ints, default: (2 7 20))
-   --saturation_criterias (space-separated ints, default: (20))
+   --saturation_criterias (space-separated ints, default: (15))
    --usecase (space-separated ints, e.g., "4 5")
 
  **Available Use Cases:**
