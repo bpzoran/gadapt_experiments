@@ -1,6 +1,8 @@
 # Genetic Algorithm Optimization Experiments
 
-This repository contains a Python project for conducting optimization experiments using genetic algorithms and differential evolution. The experiments focus on comparing different optimization strategies—including adaptive mutation, random mutation, diversity mutation, and SciPy's Differential Evolution—using the PyGAD, GAdapt, and SciPy libraries.
+This repository contains the experiments that evaluate **diversity-guided mutation**, implemented in the [GAdapt](https://github.com/bpzoran/gadapt) library, against other optimizers. Each use case (a benchmark function) is optimized by four configurations: GAdapt's diversity-guided mutation, PyGAD with random mutation, PyGAD with adaptive mutation, and SciPy's Differential Evolution. Every configuration is run many times independently, under the same stopping rule, for functions of several dimensionalities. The aim is not to compare the software efficiency of the libraries, but to compare diversity-based self-adaptive mutation with traditional genetic algorithm configurations and with a robust continuous optimizer, in terms of accuracy, convergence speed and reliability across independent runs.
+
+The experiment is fully parametrized from the command line (or by editing the variables in the `run` / `run.ps1` launcher scripts), so the values of the parameters, such as the population size, the stopping rule, the number of runs or the mutation shares, are chosen by the researcher.
 
 ## Quick Start
 
@@ -47,6 +49,70 @@ changing any machine settings:
 powershell -ExecutionPolicy Bypass -File .\run.ps1
 ```
 
+## Experiment Design
+
+### Compared Strategies
+
+The four configurations share the same core setup: the population size, the share of kept candidate solutions, the variable bounds, the crossover type and the termination limits are aligned across the libraries, even though their configuration syntax differs. Most of these are command-line parameters, see [Command-Line Arguments](#command-line-arguments). The strategy-specific details are defined in `research_experiments/runners/experiment.py`. A custom blend crossover operator is provided for PyGAD (`research_experiments/plugins/pygad/`), because PyGAD does not include one.
+
+| | GAdapt (diversity mutation) | PyGAD (random mutation) | PyGAD (adaptive mutation) | SciPy (Differential Evolution) |
+|---|---|---|---|---|
+| **Mutation** | Diversity-guided | Random | Adaptive | Differential evolution mutation with a dithered scale factor |
+| **Mutation rate** | Dynamic, regulated by the population diversity in every generation | Fixed | Adapted to the quality of the candidate solutions | Dynamic (dithering) |
+| **Crossover** | Blend | Blend | Blend | Differential evolution recombination |
+| **Replacement** | A kept share of the population, the rest is replaced by offspring | same | same | One-to-one greedy replacement |
+| **Stopping** | Stagnation-based, the same rule for all four | same | same | same |
+
+**Diversity-guided mutation in GAdapt** regulates mutation in five stages: the number and the selection of candidate solutions to mutate, the number and the selection of decision variables to mutate, and the alteration of the decision variable values. It is driven by three diversity measures (cost diversity, parent diversity and variable columnar diversity), which are described in the GAdapt documentation. At the choice points GAdapt picks one of the configured methods at random, and a share of plain random choices is retained on purpose, so the search can still escape local optima when the population has converged.
+
+### Benchmark Functions
+
+The functions are standard test functions from the optimization literature. They cover separable and non-separable problems, unimodal and multimodal landscapes, and different dimensionalities. The definitions are in `research_experiments/functions/`, and the search ranges in the use case modules.
+
+| # | Function | Motivation |
+|---|----------|------------|
+| 4 | Sphere | The simplest convex, unimodal, separable function. Checks baseline convergence and the correctness of the implementation |
+| 5 | Rosenbrock | Non-convex, with a narrow curved valley. Unimodal, but the valley slows convergence, so it tests fine-tuning near the optimum |
+| 6 | Rastrigin | Highly multimodal, with many regularly distributed local minima. Tests avoiding premature convergence and maintaining diversity |
+| 7 | Ackley | A nearly flat outer region and a central basin with many local minima. Evaluates global exploration |
+| 8 | Griewank | Many widespread local minima with a regular structure. Challenges the balance between exploration and exploitation over a wide search space |
+| 11 | Styblinski-Tang | Strongly multimodal, with many local minima and negative optima. Tests maintaining exploration in higher dimensions |
+| 9 | Beale | Continuous, unimodal, with steep peripheral peaks and a broad flat basin around the global minimum (two variables) |
+| 10 | Himmelblau | Multimodal with four global minima. Tests whether an algorithm consistently converges to any of them (two variables) |
+| 12 | Booth | A simple convex function with a single global minimum. A baseline to verify correct convergence in low dimensions (two variables) |
+
+These nine functions are the use cases 4–12. The other functions can have any number of variables, set with `--variable_numbers`, which tests how the strategies scale with the dimensionality. Use cases 1–3 are three additional trigonometric functions, which are not part of the experiment and are disabled by default (`ENABLED = False` in their modules).
+
+Standardized suites such as CEC and BBOB are not used. Their protocols do not match the question asked here: reliability, i.e. whether an optimizer occasionally fails badly, and not only how well it performs on a typical run. Such failures can be rare, so each configuration should be run many times, and the budget is governed by a stagnation-based stopping rule and not by a fixed number of function evaluations. The classical functions are used because their landscapes are well understood, which makes it possible to trace the behavior of a strategy to specific landscape features. They are unrotated, and several of them have the optimum at the origin.
+
+### Experiment Protocol
+
+- **Independent runs.** Every use case, for every number of variables, is executed in `--num_runs` independent runs of each configuration, to account for the stochastic nature of the algorithms.
+- **Stopping rule.** A run stops when the best cost has not improved for `--saturation_criteria` generations, or when `--number_of_generations` generations are reached. The same rule applies to all four configurations. It reflects operational use, where the optimizer runs repeatedly, the number of generations cannot be fixed in advance, and each run must decide by itself when to stop. The comparison is specific to the chosen stagnation window, which is why it is a parameter (`--saturation_criterias` accepts several values) and can be varied. Budgets are expressed in generations and not in function evaluations, and the configurations do not necessarily evaluate the same number of candidate solutions per generation.
+- **Same conditions.** The same population size, bounds and termination limits are used for all configurations, so that the effect of the mutation strategy is isolated.
+
+### Metrics
+
+For each use case, the following are recorded and aggregated over the runs (the column names are those in `final_results_*.csv`):
+
+| Metric | Definition | Better |
+|--------|------------|--------|
+| **Average fitness** (`avg_min_fitness`) | Mean of the final minimum fitness over the runs | Lower |
+| **Average generations** (`avg_generations`) | Mean number of generations until the stopping rule is met | Lower |
+| **Relative Early Convergence, REC** (`relative_early_convergence`) | The share of the total improvement achieved in the early phase of the search. The early phase is not fixed: it is a fraction (`--percentage_of_generations_for_performance`) of the generations of the fastest-converging configuration | Lower |
+| **Area Under the Convergence Curve, AUCC** (`area_under_convergence_curve`) | The integral of the best-so-far fitness over the generations: low-cost regions reached early and kept for longer give a smaller area | Lower |
+| **Standard deviation, SD** (`sd_min_fitness`) | Standard deviation of the final minimum fitness across the runs: the stability of the optimization | Lower |
+
+The diversity mutation is also compared with each baseline through relative measures (`output/rel_improvements_*.csv`):
+
+- **AFI %** (Adjusted Fitness Improvement): the improvement in average fitness, scaled by the fitness range between the first generation and the baseline's final result. It is not a plain percentage difference, which becomes unstable when both values are small.
+- **Generations Δ%**, **REC Δ%** and **AUCC Δ%**: the relative reduction of the average number of generations, of REC and of AUCC. Positive values mean faster or more efficient convergence than the baseline.
+- **SD SPC %** (Standard Deviation Symmetric Percent Change): the relative reduction of the variability of the final fitness. A symmetric formulation avoids instability when a denominator is close to zero. Positive values mean more stable optimization than the baseline.
+
+### Statistical Testing
+
+Per-run minimum fitness values of the diversity mutation are compared with each baseline using a paired Wilcoxon signed-rank test (runs matched by index), separately for every function and number of variables. A non-parametric paired test is used because per-run minima are not normally distributed. An omnibus Friedman test over the whole suite (functions as blocks, strategies as treatments) then checks whether the strategies differ at all, followed by a Holm-corrected pairwise post-hoc. All p-values are Holm-Bonferroni adjusted for multiple comparisons, and the effect size is the matched-pairs rank-biserial correlation. Where the means and the ranks answer different questions, both are reported: the mean-based measures (AFI and the other Δ-metrics) reflect reliability, including rare failures, while the rank-based test reflects accuracy on a typical run. See [Statistical Significance](#statistical-significance) for the generated outputs.
+
 ## Project Structure
 
 ```
@@ -56,7 +122,6 @@ GeneticAlgorithmExperiments/
 ├── research_experiment.py           # Python entry point (called by both scripts)
 ├── requirements.txt
 ├── README.md
-├── gadapt/                          # GAdapt library
 ├── research_experiments/            # Core experiment package
 │   ├── __init__.py
 │   ├── use_case_01_separated_trig_arithmetic_function.py
@@ -93,20 +158,6 @@ GeneticAlgorithmExperiments/
 │       └── significance.py
 └── results/                         # Default output directory (logs, csv, plots)
 ```
-
-## Key Features
-
-### Three-Way Optimizer Comparison
-
-The project supports running and comparing three optimization approaches side by side:
-
-- **PyGAD (Random & Adaptive Mutation)**: Standard genetic algorithm with configurable mutation operators.
-- **GAdapt (Diversity Mutation)**: Diversity-based mutation that maintains population diversity and avoids premature convergence.
-- **SciPy Differential Evolution**: Industry-standard differential evolution optimizer with convergence tracking.
-
-### Benchmark Functions
-
-A comprehensive library of optimization benchmark functions is available in `research_experiments/functions/`, including Rastrigin, Rosenbrock, Sphere, Ackley, Griewank, Beale, Himmelblau, Styblinski-Tang, Booth, and trigonometric variants.
 
 ## Running the Experiments
 
@@ -229,9 +280,11 @@ Accepts `true`/`false`, `yes`/`no`, `1`/`0`.
 |----------|---------|-------------|
 | `--variable_numbers` | `2 7 20` | Dimensionalities to test (space-separated) |
 | `--saturation_criterias` | `15` | Saturation criteria values (space-separated) |
-| `--usecase` | all | Use cases to run (space-separated, e.g. `4 5`) |
+| `--usecase` | all enabled | Use cases to run (space-separated, e.g. `4 5`). Use cases 1–3 are disabled by default |
 
 ### Available Use Cases
+
+Use cases 4–12 are the nine benchmark functions of the experiment, see [Benchmark Functions](#benchmark-functions). Use cases 1–3 are disabled by default (`ENABLED = False` in their modules), so they are skipped even if selected with `--usecase`.
 
 | # | Function | # | Function |
 |---|----------|---|----------|
@@ -247,7 +300,7 @@ Accepts `true`/`false`, `yes`/`no`, `1`/`0`.
 ### macOS / Linux
 
 ```bash
-# Quick demo (10 runs, all use cases)
+# Quick demo (10 runs, all enabled use cases)
 source run
 
 # Paper replication (1000 runs, ~4 hours)
@@ -269,7 +322,7 @@ source run --base_output_dir /path/to/output
 ### Windows (PowerShell)
 
 ```powershell
-# Quick demo (10 runs, all use cases)
+# Quick demo (10 runs, all enabled use cases)
 .\run.ps1
 
 # Paper replication (1000 runs, ~4 hours)
