@@ -49,6 +49,7 @@ $PYGAD_PARENT_SELECTION = "roulette_wheel"       # roulette_wheel (as in GAdapt)
 $PYGAD_RANDOM_MUTATION_PROBABILITY = "0.1"
 $PYGAD_ADAPTIVE_MUTATION_PROBABILITIES = @("0.6", "0.1")   # for low-quality and for high-quality solutions
 $SCIPY_DE_STRATEGY = "best1exp"
+$NORMAL_DISTRIBUTION_MUTATION_MIN_STD_DEV_DECAY_GENERATIONS = ""   # GAdapt: empty = off (constant lower bound of the Gaussian mutation step). A number of generations enables the decay, e.g. 2.5
 
 Write-Host "Starting Experiment with $NUM_RUNS runs..."
 
@@ -73,6 +74,10 @@ else {
 # e.g. .\run.ps1 --num_runs 5 --usecase 4
 
 Push-Location $PSScriptRoot
+$optionalArguments = @()
+if ($NORMAL_DISTRIBUTION_MUTATION_MIN_STD_DEV_DECAY_GENERATIONS -ne "") {
+    $optionalArguments += @("--normal_distribution_mutation_min_std_dev_decay_generations", $NORMAL_DISTRIBUTION_MUTATION_MIN_STD_DEV_DECAY_GENERATIONS)
+}
 try {
     & $python -u research_experiment.py `
         --num_runs $NUM_RUNS `
@@ -94,6 +99,7 @@ try {
         --pygad_random_mutation_probability $PYGAD_RANDOM_MUTATION_PROBABILITY `
         --pygad_adaptive_mutation_probabilities $PYGAD_ADAPTIVE_MUTATION_PROBABILITIES `
         --scipy_de_strategy $SCIPY_DE_STRATEGY `
+        @optionalArguments `
         @args
 
     if ($LASTEXITCODE -ne 0) {
@@ -123,6 +129,7 @@ Write-Host "Experiment complete. Results saved to $RESULTS_DIR"
    --percentage_of_mutation_candidate_solutions (default: 60)
    --percentage_of_mutation_decision_variables (default: 60)
    --pygad_random_mutation_probability (default: 0.1)
+   --normal_distribution_mutation_min_std_dev_decay_generations (default: not set, off)
    --pygad_adaptive_mutation_probabilities (two floats: low-quality, high-quality solutions; default: (0.6 0.1))
    --keep_elitism_percentage (default: 50.0)
    --percentage_of_generations_for_performance (default: 0.25)

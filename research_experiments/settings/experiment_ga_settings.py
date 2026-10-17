@@ -38,6 +38,7 @@ class ExperimentGASettings:
         pygad_random_mutation_probability: float = 0.1,
         pygad_adaptive_mutation_probabilities=None,
         scipy_de_strategy: str = "best1exp",
+        normal_distribution_mutation_min_std_dev_decay_generations=None,
         log_to_file: bool = True,
         plot_stat = "mean",
         plot_band = "ci",
@@ -80,6 +81,7 @@ class ExperimentGASettings:
         self._pygad_random_mutation_probability_ = None
         self._pygad_adaptive_mutation_probabilities_ = None
         self._scipy_de_strategy_ = None
+        self._normal_distribution_mutation_min_std_dev_decay_generations_ = None
 
         self._population_size = population_size
         self._percentage_of_mutation_candidate_solutions = percentage_of_mutation_candidate_solutions
@@ -111,6 +113,7 @@ class ExperimentGASettings:
         self._pygad_random_mutation_probability = pygad_random_mutation_probability
         self._pygad_adaptive_mutation_probabilities = pygad_adaptive_mutation_probabilities
         self._scipy_de_strategy = scipy_de_strategy
+        self._normal_distribution_mutation_min_std_dev_decay_generations = normal_distribution_mutation_min_std_dev_decay_generations
         self.backup_settings()
 
         self._initialized = True
@@ -146,6 +149,7 @@ class ExperimentGASettings:
         self._pygad_random_mutation_probability_ = self.pygad_random_mutation_probability
         self._pygad_adaptive_mutation_probabilities_ = self.pygad_adaptive_mutation_probabilities
         self._scipy_de_strategy_ = self.scipy_de_strategy
+        self._normal_distribution_mutation_min_std_dev_decay_generations_ = self.normal_distribution_mutation_min_std_dev_decay_generations
 
     def restore_settings(self):
         self.population_size = self._population_size_
@@ -178,6 +182,7 @@ class ExperimentGASettings:
         self.pygad_random_mutation_probability = self._pygad_random_mutation_probability_
         self.pygad_adaptive_mutation_probabilities = self._pygad_adaptive_mutation_probabilities_
         self.scipy_de_strategy = self._scipy_de_strategy_
+        self.normal_distribution_mutation_min_std_dev_decay_generations = self._normal_distribution_mutation_min_std_dev_decay_generations_
 
     @property
     def population_size(self) -> int:
@@ -471,6 +476,17 @@ class ExperimentGASettings:
             raise ValueError(f"scipy_de_strategy must be one of {', '.join(SCIPY_DE_STRATEGIES)}")
         self._scipy_de_strategy = value
 
+    @property
+    def normal_distribution_mutation_min_std_dev_decay_generations(self):
+        """GAdapt: None (the lower bound of the Gaussian mutation step is constant), or a number of generations."""
+        return self._normal_distribution_mutation_min_std_dev_decay_generations
+
+    @normal_distribution_mutation_min_std_dev_decay_generations.setter
+    def normal_distribution_mutation_min_std_dev_decay_generations(self, value):
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not value > 0):
+            raise ValueError("normal_distribution_mutation_min_std_dev_decay_generations must be None or a positive number")
+        self._normal_distribution_mutation_min_std_dev_decay_generations = value
+
     def __repr__(self):
         return (
             f"ExperimentGASettings("
@@ -501,6 +517,7 @@ class ExperimentGASettings:
             f"pygad_parent_selection={self.pygad_parent_selection}, "
             f"pygad_random_mutation_probability={self.pygad_random_mutation_probability}, "
             f"pygad_adaptive_mutation_probabilities={self.pygad_adaptive_mutation_probabilities}, "
-            f"scipy_de_strategy={self.scipy_de_strategy}"
+            f"scipy_de_strategy={self.scipy_de_strategy}, "
+            f"normal_distribution_mutation_min_std_dev_decay_generations={self.normal_distribution_mutation_min_std_dev_decay_generations}"
             f")"
         )

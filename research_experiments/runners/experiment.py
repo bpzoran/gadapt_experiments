@@ -194,6 +194,7 @@ class Experiment:
                     crossover_probability=0.5,
                     crossover="blending, variable_columnar_diversity, cost_diversity",
                     ensure_unique_individuals=False,
+                    normal_distribution_mutation_min_std_dev_decay_generations=self.app_settings.normal_distribution_mutation_min_std_dev_decay_generations,
                     logging=False)
 
             # Addition of variables with specified ranges and steps
@@ -238,6 +239,7 @@ class Experiment:
                     immigration_number=0,
                     crossover="blending",
                     ensure_unique_individuals = False,
+                    normal_distribution_mutation_min_std_dev_decay_generations=self.app_settings.normal_distribution_mutation_min_std_dev_decay_generations,
                     logging=False)
 
             # Addition of variables with specified ranges and steps

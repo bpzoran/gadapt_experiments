@@ -64,7 +64,7 @@ The four configurations share the same core setup: the population size, the shar
 | **Replacement** | A kept share of the population, the rest is replaced by offspring | same | same | One-to-one greedy replacement |
 | **Stopping** | Stagnation-based, the same rule for all four | same | same | same |
 
-**Diversity-guided mutation in GAdapt** regulates mutation in five stages: the number and the selection of candidate solutions to mutate, the number and the selection of decision variables to mutate, and the alteration of the decision variable values. It is driven by three diversity measures (cost diversity, parent diversity and variable columnar diversity), which are described in the GAdapt documentation. At the choice points GAdapt picks one of the configured methods at random, and a share of plain random choices is retained on purpose, so the search can still escape local optima when the population has converged.
+**Diversity-guided mutation in GAdapt** regulates mutation in five stages: the number and the selection of candidate solutions to mutate, the number and the selection of decision variables to mutate, and the alteration of the decision variable values. It is driven by three diversity measures (cost diversity, parent diversity and variable columnar diversity), which are described in the GAdapt documentation. At the choice points GAdapt picks one of the configured methods at random, and a share of plain random choices is retained on purpose, so the search can still escape local optima when the population has converged. Optionally (`--normal_distribution_mutation_min_std_dev_decay_generations`, off by default), the lower bound of the size of the value changes shrinks while the best cost stagnates, which makes the mutation finer exactly when the progress stalls.
 
 ### Benchmark Functions
 
@@ -201,6 +201,7 @@ source run
 | `PYGAD_PARENT_SELECTION` | `"roulette_wheel"` | Parent selection of the PyGAD strategies |
 | `PYGAD_RANDOM_MUTATION_PROBABILITY` | `0.1` | Mutation probability of PyGAD random mutation |
 | `PYGAD_ADAPTIVE_MUTATION_PROBABILITIES` | `(0.6 0.1)` | Mutation probabilities of PyGAD adaptive mutation: for low-quality and for high-quality solutions |
+| `NORMAL_DISTRIBUTION_MUTATION_MIN_STD_DEV_DECAY_GENERATIONS` | `""` | GAdapt: empty means off (`--normal_distribution_mutation_min_std_dev_decay_generations` is not passed). A number of generations, e.g. `2.5`, enables the decay |
 | `SCIPY_DE_STRATEGY` | `"best1exp"` | Strategy of SciPy Differential Evolution |
 
 The defaults of the launcher scripts configure the experiment described in [Experiment Design](#experiment-design), with the number of runs set low for a quick demo. You can override any setting by editing the variables at the top of the script, or by
@@ -248,6 +249,7 @@ their own values for some of them, see [Default Configuration](#default-configur
 |----------|---------|-------------|
 | `--percentage_of_mutation_candidate_solutions` | `60` | Percentage of candidate solutions to mutate |
 | `--percentage_of_mutation_decision_variables` | `60` | Percentage of decision variables to mutate |
+| `--normal_distribution_mutation_min_std_dev_decay_generations` | None | GAdapt (both strategies): by default the lower bound of the standard deviation of the normal distribution mutation is constant. A number of generations enables the decay: the lower bound is divided by 10 for every such number of consecutive generations without an improvement of the minimal cost, so the mutation makes finer adjustments while the progress stalls |
 | `--pygad_random_mutation_probability` | `0.1` | Mutation probability of PyGAD random mutation (0-1) |
 | `--keep_elitism_percentage` | `50.0` | Elitism percentage |
 | `--pygad_adaptive_mutation_probabilities` | `0.6 0.1` | Mutation probabilities of PyGAD adaptive mutation (0-1), two values: for low-quality and for high-quality solutions |
@@ -470,7 +472,7 @@ python -m research_experiments.utils.export_run_level_data --session results/<ti
 - pandas==2.3.3
 - numpy==1.26.4
 - scipy==1.17.1
-- gadapt==0.5.0
+- gadapt==0.5.2
 - matplotlib==3.11.2
 
 Supported platforms: macOS, Linux (via `run`) and Windows (via `run.ps1`).

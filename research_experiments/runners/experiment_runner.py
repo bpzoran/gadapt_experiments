@@ -46,6 +46,10 @@ def run_experiment(experiment: Callable) -> None:
     parser.add_argument("--pygad_adaptive_mutation_probabilities", type=float, nargs=2, metavar=("LOW_QUALITY", "HIGH_QUALITY"),
                         help="Mutation probabilities of PyGAD adaptive mutation (0-1): for low-quality and for high-quality solutions")
 
+    parser.add_argument("--normal_distribution_mutation_min_std_dev_decay_generations", type=float,
+                        help="GAdapt: the lower bound of the standard deviation of the normal distribution mutation is divided by 10 for every "
+                             "such number of consecutive generations without an improvement of the minimal cost. Not set (off) by default")
+
     # Strings
     parser.add_argument("--pygad_parent_selection", type=str,
                         help="Parent selection of the PyGAD strategies: roulette_wheel (as in GAdapt), or a PyGAD type: sss, rws, sus, rank, random, tournament")
@@ -74,6 +78,7 @@ def run_experiment(experiment: Callable) -> None:
     
     if args.percentage_of_mutation_candidate_solutions is not None: app_settings.percentage_of_mutation_candidate_solutions = args.percentage_of_mutation_candidate_solutions
     if args.percentage_of_mutation_decision_variables is not None: app_settings.percentage_of_mutation_decision_variables = args.percentage_of_mutation_decision_variables
+    if args.normal_distribution_mutation_min_std_dev_decay_generations is not None: app_settings.normal_distribution_mutation_min_std_dev_decay_generations = args.normal_distribution_mutation_min_std_dev_decay_generations
     if args.pygad_random_mutation_probability is not None: app_settings.pygad_random_mutation_probability = args.pygad_random_mutation_probability
     if args.pygad_adaptive_mutation_probabilities is not None: app_settings.pygad_adaptive_mutation_probabilities = args.pygad_adaptive_mutation_probabilities
     if args.pygad_parent_selection is not None: app_settings.pygad_parent_selection = args.pygad_parent_selection
