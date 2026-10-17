@@ -7,6 +7,7 @@ import pygad
 from gadapt.ga import GA
 
 from research_experiments.plugins.pygad.pygad_blending_crossover import blend_crossover_pygad
+from research_experiments.plugins.pygad.pygad_roulette_wheel_selection import get_pygad_parent_selection
 from research_experiments.utils import csv_writter
 from research_experiments.utils.data_aggregation import aggregate_convergence, aggregate_gap_convergence, resolve_optimum, GAP_FLOOR
 from research_experiments.utils.exp_logging import log_message_info
@@ -92,11 +93,7 @@ class Experiment:
         min_cost_per_generations_per_run_per_mutation_type: dict = {}
         average_generations: dict = {}
         app_settings = ExperimentGASettings()
-        # pygad_mutation_percentage_up = round(self.app_settings.percentage_of_mutation_candidate_solutions * (
-        #             self.app_settings.percentage_of_mutation_decision_variables / 100))
-        pygad_mutation_percentage_up = round(50.0 * (
-                self.app_settings.percentage_of_mutation_decision_variables / 100))
-        pygad_mutation_percentage_down = round(pygad_mutation_percentage_up * self.app_settings.mutation_ratio)
+        pygad_parent_selection_type = get_pygad_parent_selection(self.app_settings.pygad_parent_selection)
         if self.app_settings.scipy_de_enabled:
             ##### SCIPY DIFFERENTIAL EVOLUTION OPTIMIZATION ###############
             mutation_type = "differential evolution"
@@ -133,7 +130,7 @@ class Experiment:
             def get_ga_instance():
                  return pygad.GA(num_generations=1000,
                                 num_parents_mating=round((self.app_settings.keep_elitism_percentage / 100) * self.app_settings.population_size),
-                                parent_selection_type="sss",
+                                parent_selection_type=pygad_parent_selection_type,
                                 sol_per_pop=self.app_settings.population_size,
                                 num_genes=len(self._args_bounds),
                                 gene_type=float,
@@ -144,7 +141,7 @@ class Experiment:
                                 keep_elitism=round((self.app_settings.keep_elitism_percentage / 100) * self.app_settings.population_size),
                                 stop_criteria=f"saturate_{self.app_settings.saturation_criteria}",
                                 crossover_type=blend_crossover_pygad,
-                                mutation_probability=pygad_mutation_percentage_down / 100
+                                mutation_probability=self.app_settings.pygad_random_mutation_probability
                                 )
             mutation_type = "random mutation"
             optimization_name = f"{self.experiment_name} - {mutation_type}"
@@ -269,17 +266,14 @@ class Experiment:
             def get_ga_instance():
                 return pygad.GA(num_generations=1000,
                                 num_parents_mating=round((self.app_settings.keep_elitism_percentage / 100) * self.app_settings.population_size),
-                                parent_selection_type="sss",
+                                parent_selection_type=pygad_parent_selection_type,
                                 sol_per_pop=self.app_settings.population_size,
                                 num_genes=len(self._args_bounds),
                                 gene_type=float,
                                 gene_space=self._args_bounds,
                                 fitness_func=self.fitness_func,
-                                #mutation_percent_genes=[pygad_mutation_percentage_up, pygad_mutation_percentage_down],
-                                #mutation_probability=[self.app_settings.percentage_of_mutation_decision_variables / 100, 0.01],  # start high, end low
-                                mutation_probability=[0.5, 0.01],
-                                # start high, end low
-                                mutation_percent_genes=[pygad_mutation_percentage_up, pygad_mutation_percentage_down],
+                                # probability of mutating a decision variable: for low-quality, and for high-quality solutions
+                                mutation_probability=list(self.app_settings.pygad_adaptive_mutation_probabilities),
                                 mutation_type="adaptive",
                                 suppress_warnings=True,
                                 keep_elitism=round((self.app_settings.keep_elitism_percentage / 100) * self.app_settings.population_size),

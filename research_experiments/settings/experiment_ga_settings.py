@@ -1,3 +1,14 @@
+# Parent selection types of the PyGAD strategies: "roulette_wheel" is the custom selection from
+# research_experiments/plugins/pygad (as in GAdapt); the others are PyGAD's built-in types.
+PYGAD_PARENT_SELECTIONS = ("roulette_wheel", "sss", "rws", "sus", "rank", "random", "tournament")
+
+# Strategies of scipy.optimize.differential_evolution
+SCIPY_DE_STRATEGIES = (
+    "best1bin", "best1exp", "best2bin", "best2exp", "rand1bin", "rand1exp", "rand2bin", "rand2exp",
+    "randtobest1bin", "randtobest1exp", "currenttobest1bin", "currenttobest1exp",
+)
+
+
 class ExperimentGASettings:
     _instance = None
 
@@ -11,7 +22,6 @@ class ExperimentGASettings:
         population_size: int = 64,
         percentage_of_mutation_candidate_solutions: float = 60,
         percentage_of_mutation_decision_variables: float = 60,
-        mutation_ratio: float = 0.1,
         keep_elitism_percentage: float = 50.0,
         num_runs: int = 1000,
         logging_step: int = 50,
@@ -24,6 +34,10 @@ class ExperimentGASettings:
         gadapt_diversity_mutation_enabled: bool = True,
         pygad_adaptive_mutation_enabled: bool = True,
         scipy_de_enabled: bool = True,
+        pygad_parent_selection: str = "roulette_wheel",
+        pygad_random_mutation_probability: float = 0.1,
+        pygad_adaptive_mutation_probabilities=None,
+        scipy_de_strategy: str = "best1exp",
         log_to_file: bool = True,
         plot_stat = "mean",
         plot_band = "ci",
@@ -41,13 +55,14 @@ class ExperimentGASettings:
             return
         if variable_numbers is None:
             variable_numbers = [2, 7, 20]
+        if pygad_adaptive_mutation_probabilities is None:
+            pygad_adaptive_mutation_probabilities = [0.6, 0.1]
         if saturation_criterias is None:
             saturation_criterias = [15]
         self._number_of_generations_ = number_of_generations
         self._population_size_ = None
         self._percentage_of_mutation_candidate_solutions_ = None
         self._percentage_of_mutation_decision_variables_ = None
-        self._mutation_ratio_ = None
         self._keep_elitism_percentage_ = None
         self._pygad_adaptive_mutation_enabled_ = None
         self._log_to_file_ = None
@@ -61,11 +76,14 @@ class ExperimentGASettings:
         self._logging_step_ = None
         self._num_runs_ = None
         self._use_cases_ = None
+        self._pygad_parent_selection_ = None
+        self._pygad_random_mutation_probability_ = None
+        self._pygad_adaptive_mutation_probabilities_ = None
+        self._scipy_de_strategy_ = None
 
         self._population_size = population_size
         self._percentage_of_mutation_candidate_solutions = percentage_of_mutation_candidate_solutions
         self._percentage_of_mutation_decision_variables = percentage_of_mutation_decision_variables
-        self._mutation_ratio = mutation_ratio
         self._keep_elitism_percentage = keep_elitism_percentage
         self._num_runs = num_runs
         self._logging_step = logging_step
@@ -89,6 +107,10 @@ class ExperimentGASettings:
         self._saturation_criterias = saturation_criterias
         self._use_cases = use_cases
         self._base_output_dir = base_output_dir
+        self._pygad_parent_selection = pygad_parent_selection
+        self._pygad_random_mutation_probability = pygad_random_mutation_probability
+        self._pygad_adaptive_mutation_probabilities = pygad_adaptive_mutation_probabilities
+        self._scipy_de_strategy = scipy_de_strategy
         self.backup_settings()
 
         self._initialized = True
@@ -97,7 +119,6 @@ class ExperimentGASettings:
         self._population_size_ = self.population_size
         self._percentage_of_mutation_candidate_solutions_ = self.percentage_of_mutation_candidate_solutions
         self._percentage_of_mutation_decision_variables_ = self.percentage_of_mutation_decision_variables
-        self._mutation_ratio_ = self.mutation_ratio
         self._keep_elitism_percentage_ = self.keep_elitism_percentage
         self._num_runs_ = self.num_runs
         self._logging_step_ = self.logging_step
@@ -121,12 +142,15 @@ class ExperimentGASettings:
         self._saturation_criterias_ = self.saturation_criterias
         self._use_cases_ = self.use_cases
         self._base_output_dir_ = self.base_output_dir
+        self._pygad_parent_selection_ = self.pygad_parent_selection
+        self._pygad_random_mutation_probability_ = self.pygad_random_mutation_probability
+        self._pygad_adaptive_mutation_probabilities_ = self.pygad_adaptive_mutation_probabilities
+        self._scipy_de_strategy_ = self.scipy_de_strategy
 
     def restore_settings(self):
         self.population_size = self._population_size_
         self.percentage_of_mutation_candidate_solutions = self._percentage_of_mutation_candidate_solutions_
         self.percentage_of_mutation_decision_variables = self._percentage_of_mutation_decision_variables_
-        self.mutation_ratio = self._mutation_ratio_
         self.keep_elitism_percentage = self._keep_elitism_percentage_
         self.num_runs = self._num_runs_
         self.logging_step = self._logging_step_
@@ -150,6 +174,10 @@ class ExperimentGASettings:
         self.saturation_criterias = self._saturation_criterias_
         self.use_cases = self._use_cases_
         self.base_output_dir = self._base_output_dir_
+        self.pygad_parent_selection = self._pygad_parent_selection_
+        self.pygad_random_mutation_probability = self._pygad_random_mutation_probability_
+        self.pygad_adaptive_mutation_probabilities = self._pygad_adaptive_mutation_probabilities_
+        self.scipy_de_strategy = self._scipy_de_strategy_
 
     @property
     def population_size(self) -> int:
@@ -180,16 +208,6 @@ class ExperimentGASettings:
         if not (0.0 <= value <= 100.0):
             raise ValueError("percentage_of_mutation_decision_variables must be between 0 and 100")
         self._percentage_of_mutation_decision_variables = value
-
-    @property
-    def mutation_ratio(self) -> float:
-        return self._mutation_ratio
-
-    @mutation_ratio.setter
-    def mutation_ratio(self, value: float):
-        if not (0.0 <= value <= 100.0):
-            raise ValueError("mutation_ratio must be between 0 and 100")
-        self._mutation_ratio = value
 
     @property
     def keep_elitism_percentage(self) -> float:
@@ -409,13 +427,56 @@ class ExperimentGASettings:
             raise ValueError("plot_path must be a string")
         self._plot_path = value
 
+    # --- strategy-specific settings ---
+
+    @property
+    def pygad_parent_selection(self) -> str:
+        return self._pygad_parent_selection
+
+    @pygad_parent_selection.setter
+    def pygad_parent_selection(self, value: str):
+        if value not in PYGAD_PARENT_SELECTIONS:
+            raise ValueError(f"pygad_parent_selection must be one of {', '.join(PYGAD_PARENT_SELECTIONS)}")
+        self._pygad_parent_selection = value
+
+    @property
+    def pygad_random_mutation_probability(self) -> float:
+        return self._pygad_random_mutation_probability
+
+    @pygad_random_mutation_probability.setter
+    def pygad_random_mutation_probability(self, value: float):
+        if not (0.0 <= value <= 1.0):
+            raise ValueError("pygad_random_mutation_probability must be between 0 and 1")
+        self._pygad_random_mutation_probability = value
+
+    @property
+    def pygad_adaptive_mutation_probabilities(self) -> list[float]:
+        """Mutation probabilities of PyGAD adaptive mutation: for low-quality, and for high-quality solutions."""
+        return self._pygad_adaptive_mutation_probabilities
+
+    @pygad_adaptive_mutation_probabilities.setter
+    def pygad_adaptive_mutation_probabilities(self, value: list[float]):
+        if len(value) != 2 or not all(0.0 <= v <= 1.0 for v in value):
+            raise ValueError("pygad_adaptive_mutation_probabilities must be two values between 0 and 1: "
+                             "for low-quality, and for high-quality solutions")
+        self._pygad_adaptive_mutation_probabilities = list(value)
+
+    @property
+    def scipy_de_strategy(self) -> str:
+        return self._scipy_de_strategy
+
+    @scipy_de_strategy.setter
+    def scipy_de_strategy(self, value: str):
+        if value not in SCIPY_DE_STRATEGIES:
+            raise ValueError(f"scipy_de_strategy must be one of {', '.join(SCIPY_DE_STRATEGIES)}")
+        self._scipy_de_strategy = value
+
     def __repr__(self):
         return (
             f"ExperimentGASettings("
             f"population_size={self.population_size}, "
             f"percentage_of_mutation_candidate_solutions={self.percentage_of_mutation_candidate_solutions}, "
             f"percentage_of_mutation_decision_variables={self.percentage_of_mutation_decision_variables}, "
-            f"mutation_ratio={self.mutation_ratio}, "
             f"keep_elitism_percentage={self.keep_elitism_percentage}, "
             f"num_runs={self.num_runs}, "
             f"logging_step={self.logging_step}, "
@@ -436,6 +497,10 @@ class ExperimentGASettings:
             f"plot_path={self.plot_path}, "
             f"variable_numbers={self.variable_numbers}, "
             f"saturation_criterias={self.saturation_criterias}, "
-            f"use_cases={self.use_cases}"
+            f"use_cases={self.use_cases}, "
+            f"pygad_parent_selection={self.pygad_parent_selection}, "
+            f"pygad_random_mutation_probability={self.pygad_random_mutation_probability}, "
+            f"pygad_adaptive_mutation_probabilities={self.pygad_adaptive_mutation_probabilities}, "
+            f"scipy_de_strategy={self.scipy_de_strategy}"
             f")"
         )

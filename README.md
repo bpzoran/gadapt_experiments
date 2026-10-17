@@ -53,12 +53,13 @@ powershell -ExecutionPolicy Bypass -File .\run.ps1
 
 ### Compared Strategies
 
-The four configurations share the same core setup: the population size, the share of kept candidate solutions, the variable bounds, the crossover type and the termination limits are aligned across the libraries, even though their configuration syntax differs. Most of these are command-line parameters, see [Command-Line Arguments](#command-line-arguments). The strategy-specific details are defined in `research_experiments/runners/experiment.py`. A custom blend crossover operator is provided for PyGAD (`research_experiments/plugins/pygad/`), because PyGAD does not include one.
+The four configurations share the same core setup: the population size, the share of kept candidate solutions, the variable bounds, the crossover type and the termination limits are aligned across the libraries, even though their configuration syntax differs. Most of these are command-line parameters, see [Command-Line Arguments](#command-line-arguments). That includes the strategy-specific details: the PyGAD parent selection and mutation probabilities, and the Differential Evolution strategy. Their code is in `research_experiments/runners/experiment.py`. Two custom operators are provided for PyGAD (`research_experiments/plugins/pygad/`): the blend crossover, because PyGAD does not include one, and the roulette wheel selection, which works like the one in GAdapt. PyGAD's built-in roulette wheel (`rws`) takes probabilities proportional to the fitness values, and PyGAD maximizes the negated cost, so for the cost functions of this experiment it would favor the worst solutions instead of the best ones. The custom selection uses the ranks of the solutions, like GAdapt does, so it does not depend on the sign or the scale of the cost.
 
 | | GAdapt (diversity mutation) | PyGAD (random mutation) | PyGAD (adaptive mutation) | SciPy (Differential Evolution) |
 |---|---|---|---|---|
 | **Mutation** | Diversity-guided | Random | Adaptive | Differential evolution mutation with a dithered scale factor |
-| **Mutation rate** | Dynamic, regulated by the population diversity in every generation | Fixed | Adapted to the quality of the candidate solutions | Dynamic (dithering) |
+| **Mutation rate** | Dynamic, regulated by the population diversity in every generation | Fixed probability | Probability adapted to the quality of the candidate solutions | Dynamic (dithering) |
+| **Parent selection** | Roulette wheel | Roulette wheel | Roulette wheel | Differential evolution strategy |
 | **Crossover** | Blend | Blend | Blend | Differential evolution recombination |
 | **Replacement** | A kept share of the population, the rest is replaced by offspring | same | same | One-to-one greedy replacement |
 | **Stopping** | Stagnation-based, the same rule for all four | same | same | same |
@@ -137,7 +138,7 @@ GeneticAlgorithmExperiments/
 │   ├── use_case_11_styblinski_tang_function.py
 │   ├── use_case_12_booth_function.py
 │   ├── functions/                   # Benchmark objective functions
-│   ├── plugins/                     # PyGAD plugins (e.g. blending crossover)
+│   ├── plugins/                     # PyGAD plugins (blend crossover, roulette wheel selection)
 │   ├── runners/                     # Experiment runners & CLI argument parsing
 │   │   ├── experiment.py
 │   │   ├── experiment_runner.py
@@ -187,15 +188,22 @@ source run
 | `BASE_OUTPUT_DIR` | `results` | Base output directory for logs, CSVs, and plots |
 | `DIMENSIONS` | `(2 7 20)` | Dimensionalities to test |
 | `SATURATION_CRITERIAS` | `(20)` | Saturation criteria values |
-| `PERCENTAGE_OF_MUTATION_DECISION_VARIABLES` | `20` | Percentage of mutation decision variables |
+| `KEEP_ELITISM_PERCENTAGE` | `50` | Percentage of the best candidate solutions kept in the population (also the share used as mating parents) |
 | `PERCENTAGE_OF_MUTATION_CANDIDATE_SOLUTIONS` | `60` | Percentage of mutation candidate solutions |
+| `PERCENTAGE_OF_MUTATION_DECISION_VARIABLES` | `60` | Percentage of mutation decision variables |
+| `PERCENTAGE_OF_GENERATIONS_FOR_PERFORMANCE` | `0.25` | Length of the early phase of the search used by the REC metric (a fraction of the generations) |
 | `NUMBER_OF_GENERATIONS` | `600` | Number of generations |
 | `SCIPY_DE_ENABLED` | `true` | Enable SciPy Differential Evolution |
 | `PYGAD_ADAPTIVE_MUTATION_ENABLED` | `true` | Enable PyGAD adaptive mutation |
 | `PYGAD_RANDOM_MUTATION_ENABLED` | `true` | Enable PyGAD random mutation |
+| `GADAPT_DIVERSITY_MUTATION_ENABLED` | `true` | Enable GAdapt diversity mutation |
 | `GADAPT_RANDOM_MUTATION_ENABLED` | `false` | Enable GAdapt random mutation |
+| `PYGAD_PARENT_SELECTION` | `"roulette_wheel"` | Parent selection of the PyGAD strategies |
+| `PYGAD_RANDOM_MUTATION_PROBABILITY` | `0.1` | Mutation probability of PyGAD random mutation |
+| `PYGAD_ADAPTIVE_MUTATION_PROBABILITIES` | `(0.6 0.1)` | Mutation probabilities of PyGAD adaptive mutation: for low-quality and for high-quality solutions |
+| `SCIPY_DE_STRATEGY` | `"best1exp"` | Strategy of SciPy Differential Evolution |
 
-You can override any setting by editing the variables at the top of the script, or by
+The defaults of the launcher scripts configure the experiment described in [Experiment Design](#experiment-design), with the number of runs set low for a quick demo. You can override any setting by editing the variables at the top of the script, or by
 passing arguments on the command line. Command-line arguments are appended after the
 script's own defaults, so they always take precedence:
 
@@ -222,7 +230,7 @@ All arguments below can be passed to `run`, to `run.ps1`, or directly to
 
 The defaults listed below are those of `research_experiment.py` (see `ExperimentGASettings`). The launcher scripts pass
 their own values for some of them, see [Default Configuration](#default-configuration-in-run--runps1): `--num_runs`,
-`--saturation_criterias`, `--percentage_of_mutation_decision_variables` and `--base_output_dir`.
+`--saturation_criterias` and `--base_output_dir`.
 
 ### Integers
 
@@ -240,10 +248,13 @@ their own values for some of them, see [Default Configuration](#default-configur
 |----------|---------|-------------|
 | `--percentage_of_mutation_candidate_solutions` | `60` | Percentage of candidate solutions to mutate |
 | `--percentage_of_mutation_decision_variables` | `60` | Percentage of decision variables to mutate |
-| `--mutation_ratio` | `0.1` | Mutation ratio |
+| `--pygad_random_mutation_probability` | `0.1` | Mutation probability of PyGAD random mutation (0-1) |
 | `--keep_elitism_percentage` | `50.0` | Elitism percentage |
+| `--pygad_adaptive_mutation_probabilities` | `0.6 0.1` | Mutation probabilities of PyGAD adaptive mutation (0-1), two values: for low-quality and for high-quality solutions |
 | `--percentage_of_generations_for_performance` | `0.25` | Generations fraction for performance check |
 
+> **Removed option.** `--mutation_ratio` no longer exists: the mutation probabilities of the PyGAD strategies are set directly with `--pygad_random_mutation_probability` and `--pygad_adaptive_mutation_probabilities`. Passing it prints a warning.
+>
 > **Renamed options.** Since GAdapt 0.5.0 uses the terms *candidate solution* and *decision variable* (formerly *chromosome* and *gene*),
 > `--percentage_of_mutation_chromosomes` is now `--percentage_of_mutation_candidate_solutions` and
 > `--percentage_of_mutation_genes` is now `--percentage_of_mutation_decision_variables`. The previous names are still accepted,
@@ -267,6 +278,8 @@ Accepts `true`/`false`, `yes`/`no`, `1`/`0`.
 
 | Argument | Default | Description |
 |----------|---------|-------------|
+| `--pygad_parent_selection` | `"roulette_wheel"` | Parent selection of the PyGAD strategies: `roulette_wheel` (the custom selection, as in GAdapt), or a PyGAD type: `sss`, `rws`, `sus`, `rank`, `random`, `tournament` |
+| `--scipy_de_strategy` | `"best1exp"` | Strategy of SciPy Differential Evolution, any strategy of `scipy.optimize.differential_evolution` |
 | `--plot_stat` | `"mean"` | Statistic to plot |
 | `--plot_band` | `"ci"` | Plot band type |
 | `--csv_path` | None | Custom CSV output path |
@@ -309,8 +322,8 @@ source run --num_runs 1000
 # Run only Sphere and Rosenbrock
 source run --usecase 4 5
 
-# Custom population size and mutation ratio
-source run --population_size 128 --mutation_ratio 0.2
+# Custom population size and PyGAD parent selection
+source run --population_size 128 --pygad_parent_selection tournament
 
 # Disable SciPy DE, run only GA-based optimizers
 source run --scipy_de_enabled false
@@ -331,8 +344,8 @@ source run --base_output_dir /path/to/output
 # Run only Sphere and Rosenbrock
 .\run.ps1 --usecase 4 5
 
-# Custom population size and mutation ratio
-.\run.ps1 --population_size 128 --mutation_ratio 0.2
+# Custom population size and PyGAD parent selection
+.\run.ps1 --population_size 128 --pygad_parent_selection tournament
 
 # Disable SciPy DE, run only GA-based optimizers
 .\run.ps1 --scipy_de_enabled false

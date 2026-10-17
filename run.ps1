@@ -33,13 +33,22 @@ $RESULTS_DIR = "results"
 $BASE_OUTPUT_DIR = $RESULTS_DIR
 $DIMENSIONS = @(2, 7, 20)   # Default dimensions to test
 $SATURATION_CRITERIAS = @(20)
-$PERCENTAGE_OF_MUTATION_DECISION_VARIABLES = 20
+$KEEP_ELITISM_PERCENTAGE = 50     # Share of the best candidate solutions kept in the population (and used as mating parents)
 $PERCENTAGE_OF_MUTATION_CANDIDATE_SOLUTIONS = 60
+$PERCENTAGE_OF_MUTATION_DECISION_VARIABLES = 60
+$PERCENTAGE_OF_GENERATIONS_FOR_PERFORMANCE = "0.25"   # Length of the early phase used by the REC metric
 $NUMBER_OF_GENERATIONS = 600
 $SCIPY_DE_ENABLED = "true"
 $PYGAD_ADAPTIVE_MUTATION_ENABLED = "true"
 $PYGAD_RANDOM_MUTATION_ENABLED = "true"
+$GADAPT_DIVERSITY_MUTATION_ENABLED = "true"
 $GADAPT_RANDOM_MUTATION_ENABLED = "false"
+
+# --- Strategy-specific settings ---
+$PYGAD_PARENT_SELECTION = "roulette_wheel"       # roulette_wheel (as in GAdapt), or a PyGAD type: sss, rws, sus, rank, random, tournament
+$PYGAD_RANDOM_MUTATION_PROBABILITY = "0.1"
+$PYGAD_ADAPTIVE_MUTATION_PROBABILITIES = @("0.6", "0.1")   # for low-quality and for high-quality solutions
+$SCIPY_DE_STRATEGY = "best1exp"
 
 Write-Host "Starting Experiment with $NUM_RUNS runs..."
 
@@ -71,13 +80,20 @@ try {
         --base_output_dir $BASE_OUTPUT_DIR `
         --variable_numbers $DIMENSIONS `
         --saturation_criterias $SATURATION_CRITERIAS `
-        --percentage_of_mutation_decision_variables $PERCENTAGE_OF_MUTATION_DECISION_VARIABLES `
+        --keep_elitism_percentage $KEEP_ELITISM_PERCENTAGE `
         --percentage_of_mutation_candidate_solutions $PERCENTAGE_OF_MUTATION_CANDIDATE_SOLUTIONS `
+        --percentage_of_mutation_decision_variables $PERCENTAGE_OF_MUTATION_DECISION_VARIABLES `
+        --percentage_of_generations_for_performance $PERCENTAGE_OF_GENERATIONS_FOR_PERFORMANCE `
         --number_of_generations $NUMBER_OF_GENERATIONS `
         --scipy_de_enabled $SCIPY_DE_ENABLED `
         --pygad_adaptive_mutation_enabled $PYGAD_ADAPTIVE_MUTATION_ENABLED `
         --pygad_random_mutation_enabled $PYGAD_RANDOM_MUTATION_ENABLED `
+        --gadapt_diversity_mutation_enabled $GADAPT_DIVERSITY_MUTATION_ENABLED `
         --gadapt_random_mutation_enabled $GADAPT_RANDOM_MUTATION_ENABLED `
+        --pygad_parent_selection $PYGAD_PARENT_SELECTION `
+        --pygad_random_mutation_probability $PYGAD_RANDOM_MUTATION_PROBABILITY `
+        --pygad_adaptive_mutation_probabilities $PYGAD_ADAPTIVE_MUTATION_PROBABILITIES `
+        --scipy_de_strategy $SCIPY_DE_STRATEGY `
         @args
 
     if ($LASTEXITCODE -ne 0) {
@@ -106,7 +122,8 @@ Write-Host "Experiment complete. Results saved to $RESULTS_DIR"
  **Floats:**
    --percentage_of_mutation_candidate_solutions (default: 60)
    --percentage_of_mutation_decision_variables (default: 60)
-   --mutation_ratio (default: 0.1)
+   --pygad_random_mutation_probability (default: 0.1)
+   --pygad_adaptive_mutation_probabilities (two floats: low-quality, high-quality solutions; default: (0.6 0.1))
    --keep_elitism_percentage (default: 50.0)
    --percentage_of_generations_for_performance (default: 0.25)
 
@@ -121,6 +138,8 @@ Write-Host "Experiment complete. Results saved to $RESULTS_DIR"
  **Strings:**
    --plot_stat (default: "mean")
    --plot_band (default: "ci")
+   --pygad_parent_selection (default: "roulette_wheel"; or a PyGAD type: sss, rws, sus, rank, random, tournament)
+   --scipy_de_strategy (default: "best1exp")
    --csv_path (default: None)
    --base_output_dir (default: None, the current directory)
 

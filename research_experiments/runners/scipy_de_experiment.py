@@ -95,7 +95,7 @@ def execute_scipy_de_experiment(
         result = differential_evolution(
             tracker,
             bounds,
-            strategy="best1exp",
+            strategy=app_settings.scipy_de_strategy,
             popsize=popsize_multiplier,
             maxiter=10000,
             mutation=(0.5, 1),

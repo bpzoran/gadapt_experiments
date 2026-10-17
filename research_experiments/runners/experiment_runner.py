@@ -25,11 +25,10 @@ def run_experiment(experiment: Callable) -> None:
     parser.add_argument("--number_of_generations", type=int, help="Number of generations")
 
     # Floats
-    parser.add_argument("--percentage_of_mutation_candidate_solutions", "--percentage_of_mutation_candidate_solutions", type=float,
-                        help="Percentage of mutation candidate solutions (--percentage_of_mutation_candidate_solutions is the previous name)")
-    parser.add_argument("--percentage_of_mutation_decision_variables", "--percentage_of_mutation_decision_variables", type=float,
-                        help="Percentage of mutation decision variables (--percentage_of_mutation_decision_variables is the previous name)")
-    parser.add_argument("--mutation_ratio", type=float, help="Mutation ratio")
+    parser.add_argument("--percentage_of_mutation_candidate_solutions", "--percentage_of_mutation_chromosomes", type=float,
+                        help="Percentage of mutation candidate solutions (--percentage_of_mutation_chromosomes is the previous name)")
+    parser.add_argument("--percentage_of_mutation_decision_variables", "--percentage_of_mutation_genes", type=float,
+                        help="Percentage of mutation decision variables (--percentage_of_mutation_genes is the previous name)")
     parser.add_argument("--keep_elitism_percentage", type=float, help="Keep elitism percentage")
     parser.add_argument("--percentage_of_generations_for_performance", type=float, help="Percentage of generations for performance")
 
@@ -42,7 +41,15 @@ def run_experiment(experiment: Callable) -> None:
     parser.add_argument("--log_to_file", type=str2bool, help="Log to file")
     parser.add_argument("--scipy_de_enabled", type=str2bool, help="SciPy differential evolution enabled")
 
+    parser.add_argument("--pygad_random_mutation_probability", type=float,
+                        help="Mutation probability of PyGAD random mutation (0-1)")
+    parser.add_argument("--pygad_adaptive_mutation_probabilities", type=float, nargs=2, metavar=("LOW_QUALITY", "HIGH_QUALITY"),
+                        help="Mutation probabilities of PyGAD adaptive mutation (0-1): for low-quality and for high-quality solutions")
+
     # Strings
+    parser.add_argument("--pygad_parent_selection", type=str,
+                        help="Parent selection of the PyGAD strategies: roulette_wheel (as in GAdapt), or a PyGAD type: sss, rws, sus, rank, random, tournament")
+    parser.add_argument("--scipy_de_strategy", type=str, help="Strategy of SciPy Differential Evolution, e.g. best1exp")
     parser.add_argument("--plot_stat", type=str, help="Plot stat")
     parser.add_argument("--plot_band", type=str, help="Plot band")
     parser.add_argument("--csv_path", type=str, help="CSV path")
@@ -67,14 +74,16 @@ def run_experiment(experiment: Callable) -> None:
     
     if args.percentage_of_mutation_candidate_solutions is not None: app_settings.percentage_of_mutation_candidate_solutions = args.percentage_of_mutation_candidate_solutions
     if args.percentage_of_mutation_decision_variables is not None: app_settings.percentage_of_mutation_decision_variables = args.percentage_of_mutation_decision_variables
-    if args.mutation_ratio is not None: app_settings.mutation_ratio = args.mutation_ratio
+    if args.pygad_random_mutation_probability is not None: app_settings.pygad_random_mutation_probability = args.pygad_random_mutation_probability
+    if args.pygad_adaptive_mutation_probabilities is not None: app_settings.pygad_adaptive_mutation_probabilities = args.pygad_adaptive_mutation_probabilities
+    if args.pygad_parent_selection is not None: app_settings.pygad_parent_selection = args.pygad_parent_selection
+    if args.scipy_de_strategy is not None: app_settings.scipy_de_strategy = args.scipy_de_strategy
     if args.keep_elitism_percentage is not None: app_settings.keep_elitism_percentage = args.keep_elitism_percentage
     if args.percentage_of_generations_for_performance is not None: app_settings.percentage_of_generations_for_performance = args.percentage_of_generations_for_performance
 
     if args.plot_fitness is not None: app_settings.plot_fitness = args.plot_fitness
     if args.gadapt_random_mutation_enabled is not None: app_settings.gadapt_random_mutation_enabled = args.gadapt_random_mutation_enabled
     if args.pygad_random_mutation_enabled is not None: app_settings.pygad_random_mutation_enabled = args.pygad_random_mutation_enabled
-    if args.gadapt_diversity_mutation_enabled is not None: app_settings.gadapt_diversity_mutation_enabled = args.gadapt_diversity_mutation_enabled
     if args.pygad_adaptive_mutation_enabled is not None: app_settings.pygad_adaptive_mutation_enabled = args.pygad_adaptive_mutation_enabled
     if args.log_to_file is not None: app_settings.log_to_file = args.log_to_file
     if args.scipy_de_enabled is not None: app_settings.scipy_de_enabled = args.scipy_de_enabled
@@ -94,6 +103,10 @@ def run_experiment(experiment: Callable) -> None:
             parts = item.replace('_', ' ').replace(',', ' ').split()
             use_cases.extend([int(p) for p in parts])
         app_settings.use_cases = use_cases
+
+    if "--mutation_ratio" in unknown:
+        print("WARNING: --mutation_ratio was removed and is ignored. The mutation probabilities of the PyGAD strategies are set with "
+              "--pygad_random_mutation_probability and --pygad_adaptive_mutation_probabilities.")
 
     app_settings.backup_settings()
 
