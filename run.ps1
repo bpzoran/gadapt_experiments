@@ -39,6 +39,7 @@ $PERCENTAGE_OF_MUTATION_DECISION_VARIABLES = 60
 $PERCENTAGE_OF_GENERATIONS_FOR_PERFORMANCE = "0.25"   # Length of the early phase used by the REC metric
 $NUMBER_OF_GENERATIONS = 600
 $SCIPY_DE_ENABLED = "true"
+$CMAES_ENABLED = "true"
 $PYGAD_ADAPTIVE_MUTATION_ENABLED = "true"
 $PYGAD_RANDOM_MUTATION_ENABLED = "true"
 $GADAPT_DIVERSITY_MUTATION_ENABLED = "true"
@@ -49,6 +50,7 @@ $PYGAD_PARENT_SELECTION = "roulette_wheel"       # roulette_wheel (as in GAdapt)
 $PYGAD_RANDOM_MUTATION_PROBABILITY = "0.1"
 $PYGAD_ADAPTIVE_MUTATION_PROBABILITIES = @("0.6", "0.1")   # for low-quality and for high-quality solutions
 $SCIPY_DE_STRATEGY = "best1exp"
+$CMAES_SIGMA_FRACTION = "0.3"   # CMA-ES: initial standard deviation, as a fraction of the range of the variables
 $NORMAL_DISTRIBUTION_MUTATION_MIN_STD_DEV_DECAY_GENERATIONS = ""   # GAdapt: empty = off (constant lower bound of the Gaussian mutation step). A number of generations enables the decay, e.g. 2.5
 
 Write-Host "Starting Experiment with $NUM_RUNS runs..."
@@ -91,6 +93,7 @@ try {
         --percentage_of_generations_for_performance $PERCENTAGE_OF_GENERATIONS_FOR_PERFORMANCE `
         --number_of_generations $NUMBER_OF_GENERATIONS `
         --scipy_de_enabled $SCIPY_DE_ENABLED `
+        --cmaes_enabled $CMAES_ENABLED `
         --pygad_adaptive_mutation_enabled $PYGAD_ADAPTIVE_MUTATION_ENABLED `
         --pygad_random_mutation_enabled $PYGAD_RANDOM_MUTATION_ENABLED `
         --gadapt_diversity_mutation_enabled $GADAPT_DIVERSITY_MUTATION_ENABLED `
@@ -99,6 +102,7 @@ try {
         --pygad_random_mutation_probability $PYGAD_RANDOM_MUTATION_PROBABILITY `
         --pygad_adaptive_mutation_probabilities $PYGAD_ADAPTIVE_MUTATION_PROBABILITIES `
         --scipy_de_strategy $SCIPY_DE_STRATEGY `
+        --cmaes_sigma_fraction $CMAES_SIGMA_FRACTION `
         @optionalArguments `
         @args
 
@@ -140,7 +144,8 @@ Write-Host "Experiment complete. Results saved to $RESULTS_DIR"
    --pygad_random_mutation_enabled (default: True)
    --gadapt_diversity_mutation_enabled (default: True)
    --pygad_adaptive_mutation_enabled (default: True)
-   --log_to_file (default: True)
+   --cmaes_enabled (default: True)
+ --log_to_file (default: True)
 
  **Strings:**
    --plot_stat (default: "mean")

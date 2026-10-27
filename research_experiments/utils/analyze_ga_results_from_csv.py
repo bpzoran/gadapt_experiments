@@ -100,7 +100,7 @@ def compute_pairwise(df):
             continue  # need diversity to compare against
         div = means.loc["diversity mutation"]
 
-        for baseline in ["adaptive mutation","random mutation","differential evolution"]:
+        for baseline in ["adaptive mutation","random mutation","differential evolution","cma-es"]:
             if baseline not in means.index:
                 continue
             base = means.loc[baseline]
@@ -237,7 +237,7 @@ def write_word_report(overall_df, std_agg, cust_agg, outpath, wilcoxon_df=None, 
         "Reporting each dimensionality separately shows whether an advantage holds as the search space "
         "grows, rather than being averaged away across dimensionalities. "
         "Across the whole suite, a Friedman test (functions as blocks, "
-        "strategies as treatments, one mean score per function) checks whether the four strategies differ "
+        "strategies as treatments, one mean score per function) checks whether the compared strategies differ "
         "overall; when significant, a Holm-Bonferroni-corrected pairwise Wilcoxon signed-rank post-hoc "
         "(functions as matched pairs) identifies which baselines differ from Diversity mutation. "
         "All p-values below are Holm-Bonferroni adjusted for multiple comparisons; significance is assessed "

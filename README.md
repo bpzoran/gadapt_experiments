@@ -1,6 +1,6 @@
 # Genetic Algorithm Optimization Experiments
 
-This repository contains the experiments that evaluate **diversity-guided mutation**, implemented in the [GAdapt](https://github.com/bpzoran/gadapt) library, against other optimizers. Each use case (a benchmark function) is optimized by four configurations: GAdapt's diversity-guided mutation, PyGAD with random mutation, PyGAD with adaptive mutation, and SciPy's Differential Evolution. Every configuration is run many times independently, under the same stopping rule, for functions of several dimensionalities. The aim is not to compare the software efficiency of the libraries, but to compare diversity-based self-adaptive mutation with traditional genetic algorithm configurations and with a robust continuous optimizer, in terms of accuracy, convergence speed and reliability across independent runs.
+This repository contains the experiments that evaluate **diversity-guided mutation**, implemented in the [GAdapt](https://github.com/bpzoran/gadapt) library, against other optimizers. Each use case (a benchmark function) is optimized by five configurations: GAdapt's diversity-guided mutation, PyGAD with random mutation, PyGAD with adaptive mutation, SciPy's Differential Evolution, and CMA-ES (the `cmaes` library). Every configuration is run many times independently, under the same stopping rule, for functions of several dimensionalities. The aim is not to compare the software efficiency of the libraries, but to compare diversity-based self-adaptive mutation with traditional genetic algorithm configurations and with a robust continuous optimizer, in terms of accuracy, convergence speed and reliability across independent runs.
 
 The experiment is fully parametrized from the command line (or by editing the variables in the `run` / `run.ps1` launcher scripts), so the values of the parameters, such as the population size, the stopping rule, the number of runs or the mutation shares, are chosen by the researcher.
 
@@ -53,16 +53,18 @@ powershell -ExecutionPolicy Bypass -File .\run.ps1
 
 ### Compared Strategies
 
-The four configurations share the same core setup: the population size, the share of kept candidate solutions, the variable bounds, the crossover type and the termination limits are aligned across the libraries, even though their configuration syntax differs. Most of these are command-line parameters, see [Command-Line Arguments](#command-line-arguments). That includes the strategy-specific details: the PyGAD parent selection and mutation probabilities, and the Differential Evolution strategy. Their code is in `research_experiments/runners/experiment.py`. Two custom operators are provided for PyGAD (`research_experiments/plugins/pygad/`): the blend crossover, because PyGAD does not include one, and the roulette wheel selection, which works like the one in GAdapt. PyGAD's built-in roulette wheel (`rws`) takes probabilities proportional to the fitness values, and PyGAD maximizes the negated cost, so for the cost functions of this experiment it would favor the worst solutions instead of the best ones. The custom selection uses the ranks of the solutions, like GAdapt does, so it does not depend on the sign or the scale of the cost.
+The configurations share the same core setup: the population size, the share of kept candidate solutions, the variable bounds, the crossover type and the termination limits are aligned across the libraries, even though their configuration syntax differs. Most of these are command-line parameters, see [Command-Line Arguments](#command-line-arguments). That includes the strategy-specific details: the PyGAD parent selection and mutation probabilities, and the Differential Evolution strategy. Their code is in `research_experiments/runners/experiment.py`. Two custom operators are provided for PyGAD (`research_experiments/plugins/pygad/`): the blend crossover, because PyGAD does not include one, and the roulette wheel selection, which works like the one in GAdapt. PyGAD's built-in roulette wheel (`rws`) takes probabilities proportional to the fitness values, and PyGAD maximizes the negated cost, so for the cost functions of this experiment it would favor the worst solutions instead of the best ones. The custom selection uses the ranks of the solutions, like GAdapt does, so it does not depend on the sign or the scale of the cost.
 
-| | GAdapt (diversity mutation) | PyGAD (random mutation) | PyGAD (adaptive mutation) | SciPy (Differential Evolution) |
-|---|---|---|---|---|
-| **Mutation** | Diversity-guided | Random | Adaptive | Differential evolution mutation with a dithered scale factor |
-| **Mutation rate** | Dynamic, regulated by the population diversity in every generation | Fixed probability | Probability adapted to the quality of the candidate solutions | Dynamic (dithering) |
-| **Parent selection** | Roulette wheel | Roulette wheel | Roulette wheel | Differential evolution strategy |
-| **Crossover** | Blend | Blend | Blend | Differential evolution recombination |
-| **Replacement** | A kept share of the population, the rest is replaced by offspring | same | same | One-to-one greedy replacement |
-| **Stopping** | Stagnation-based, the same rule for all four | same | same | same |
+| | GAdapt (diversity mutation) | PyGAD (random mutation) | PyGAD (adaptive mutation) | SciPy (Differential Evolution) | CMA-ES |
+|---|---|---|---|---|---|
+| **Mutation** | Diversity-guided | Random | Adaptive | Differential evolution mutation with a dithered scale factor | Sampling from an adapted multivariate normal distribution (no mutation operator) |
+| **Mutation rate** | Dynamic, regulated by the population diversity in every generation | Fixed probability | Probability adapted to the quality of the candidate solutions | Dynamic (dithering) | Adapted step size and covariance matrix |
+| **Parent selection** | Roulette wheel | Roulette wheel | Roulette wheel | Differential evolution strategy | The best half of the sampled candidate solutions update the distribution |
+| **Crossover** | Blend | Blend | Blend | Differential evolution recombination | None (recombination of the weighted best samples into the new mean) |
+| **Replacement** | A kept share of the population, the rest is replaced by offspring | same | same | One-to-one greedy replacement | A new population is sampled from the updated distribution in every generation |
+| **Stopping** | Stagnation-based, the same rule for all five | same | same | same | same |
+
+**CMA-ES** uses `cmaes.CMA` with the bounds of the variables. The initial mean is the center of the range, and the initial standard deviation is `--cmaes_sigma_fraction` (default 0.3) of the range. The population size is the one of the other strategies, `--population_size`, and the stopping rule is the common one (it also stops if CMA-ES itself reports numerical convergence). There are no restarts.
 
 **Diversity-guided mutation in GAdapt** regulates mutation in five stages: the number and the selection of candidate solutions to mutate, the number and the selection of decision variables to mutate, and the alteration of the decision variable values. It is driven by three diversity measures (cost diversity, parent diversity and variable columnar diversity), which are described in the GAdapt documentation. At the choice points GAdapt picks one of the configured methods at random, and a share of plain random choices is retained on purpose, so the search can still escape local optima when the population has converged. Optionally (`--normal_distribution_mutation_min_std_dev_decay_generations`, off by default), the lower bound of the size of the value changes shrinks while the best cost stagnates, which makes the mutation finer exactly when the progress stalls.
 
@@ -89,7 +91,7 @@ Standardized suites such as CEC and BBOB are not used. Their protocols do not ma
 ### Experiment Protocol
 
 - **Independent runs.** Every use case, for every number of variables, is executed in `--num_runs` independent runs of each configuration, to account for the stochastic nature of the algorithms.
-- **Stopping rule.** A run stops when the best cost has not improved for `--saturation_criteria` generations, or when `--number_of_generations` generations are reached. The same rule applies to all four configurations. It reflects operational use, where the optimizer runs repeatedly, the number of generations cannot be fixed in advance, and each run must decide by itself when to stop. The comparison is specific to the chosen stagnation window, which is why it is a parameter (`--saturation_criterias` accepts several values) and can be varied. Budgets are expressed in generations and not in function evaluations, and the configurations do not necessarily evaluate the same number of candidate solutions per generation.
+- **Stopping rule.** A run stops when the best cost has not improved for `--saturation_criteria` generations, or when `--number_of_generations` generations are reached. The same rule applies to all five configurations. It reflects operational use, where the optimizer runs repeatedly, the number of generations cannot be fixed in advance, and each run must decide by itself when to stop. The comparison is specific to the chosen stagnation window, which is why it is a parameter (`--saturation_criterias` accepts several values) and can be varied. Budgets are expressed in generations and not in function evaluations, and the configurations do not necessarily evaluate the same number of candidate solutions per generation.
 - **Same conditions.** The same population size, bounds and termination limits are used for all configurations, so that the effect of the mutation strategy is isolated.
 
 ### Metrics
@@ -144,7 +146,8 @@ GeneticAlgorithmExperiments/
 │   │   ├── experiment_runner.py
 │   │   ├── gadapt_experiment.py
 │   │   ├── pygad_experiment.py
-│   │   └── scipy_de_experiment.py
+│   │   ├── scipy_de_experiment.py
+│   │   └── cmaes_experiment.py
 │   ├── settings/                    # Singleton experiment settings
 │   │   └── experiment_ga_settings.py
 │   └── utils/                       # Logging, CSV, plotting utilities
@@ -194,6 +197,7 @@ source run
 | `PERCENTAGE_OF_GENERATIONS_FOR_PERFORMANCE` | `0.25` | Length of the early phase of the search used by the REC metric (a fraction of the generations) |
 | `NUMBER_OF_GENERATIONS` | `600` | Number of generations |
 | `SCIPY_DE_ENABLED` | `true` | Enable SciPy Differential Evolution |
+| `CMAES_ENABLED` | `true` | Enable CMA-ES |
 | `PYGAD_ADAPTIVE_MUTATION_ENABLED` | `true` | Enable PyGAD adaptive mutation |
 | `PYGAD_RANDOM_MUTATION_ENABLED` | `true` | Enable PyGAD random mutation |
 | `GADAPT_DIVERSITY_MUTATION_ENABLED` | `true` | Enable GAdapt diversity mutation |
@@ -203,6 +207,7 @@ source run
 | `PYGAD_ADAPTIVE_MUTATION_PROBABILITIES` | `(0.6 0.1)` | Mutation probabilities of PyGAD adaptive mutation: for low-quality and for high-quality solutions |
 | `NORMAL_DISTRIBUTION_MUTATION_MIN_STD_DEV_DECAY_GENERATIONS` | `""` | GAdapt: empty means off (`--normal_distribution_mutation_min_std_dev_decay_generations` is not passed). A number of generations, e.g. `2.5`, enables the decay |
 | `SCIPY_DE_STRATEGY` | `"best1exp"` | Strategy of SciPy Differential Evolution |
+| `CMAES_SIGMA_FRACTION` | `0.3` | CMA-ES: initial standard deviation, as a fraction of the range of the variables |
 
 The defaults of the launcher scripts configure the experiment described in [Experiment Design](#experiment-design), with the number of runs set low for a quick demo. You can override any setting by editing the variables at the top of the script, or by
 passing arguments on the command line. Command-line arguments are appended after the
@@ -250,6 +255,7 @@ their own values for some of them, see [Default Configuration](#default-configur
 | `--percentage_of_mutation_candidate_solutions` | `60` | Percentage of candidate solutions to mutate |
 | `--percentage_of_mutation_decision_variables` | `60` | Percentage of decision variables to mutate |
 | `--normal_distribution_mutation_min_std_dev_decay_generations` | None | GAdapt (both strategies): by default the lower bound of the standard deviation of the normal distribution mutation is constant. A number of generations enables the decay: the lower bound is divided by 10 for every such number of consecutive generations without an improvement of the minimal cost, so the mutation makes finer adjustments while the progress stalls |
+| `--cmaes_sigma_fraction` | `0.3` | CMA-ES: the initial standard deviation, as a fraction of the range of the variables |
 | `--pygad_random_mutation_probability` | `0.1` | Mutation probability of PyGAD random mutation (0-1) |
 | `--keep_elitism_percentage` | `50.0` | Elitism percentage |
 | `--pygad_adaptive_mutation_probabilities` | `0.6 0.1` | Mutation probabilities of PyGAD adaptive mutation (0-1), two values: for low-quality and for high-quality solutions |
@@ -274,6 +280,7 @@ Accepts `true`/`false`, `yes`/`no`, `1`/`0`.
 | `--gadapt_diversity_mutation_enabled` | `true` | Enable GAdapt diversity mutation |
 | `--pygad_adaptive_mutation_enabled` | `true` | Enable PyGAD adaptive mutation |
 | `--scipy_de_enabled` | `true` | Enable SciPy Differential Evolution |
+| `--cmaes_enabled` | `true` | Enable CMA-ES |
 | `--log_to_file` | `true` | Write logs to file |
 
 ### Strings
@@ -472,6 +479,7 @@ python -m research_experiments.utils.export_run_level_data --session results/<ti
 - pandas==2.3.3
 - numpy==1.26.4
 - scipy==1.17.1
+- cmaes==0.13.1
 - gadapt==0.5.2
 - matplotlib==3.11.2
 

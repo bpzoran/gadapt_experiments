@@ -38,6 +38,8 @@ class ExperimentGASettings:
         pygad_random_mutation_probability: float = 0.1,
         pygad_adaptive_mutation_probabilities=None,
         scipy_de_strategy: str = "best1exp",
+        cmaes_enabled: bool = True,
+        cmaes_sigma_fraction: float = 0.3,
         normal_distribution_mutation_min_std_dev_decay_generations=None,
         log_to_file: bool = True,
         plot_stat = "mean",
@@ -81,6 +83,8 @@ class ExperimentGASettings:
         self._pygad_random_mutation_probability_ = None
         self._pygad_adaptive_mutation_probabilities_ = None
         self._scipy_de_strategy_ = None
+        self._cmaes_enabled_ = None
+        self._cmaes_sigma_fraction_ = None
         self._normal_distribution_mutation_min_std_dev_decay_generations_ = None
 
         self._population_size = population_size
@@ -113,6 +117,8 @@ class ExperimentGASettings:
         self._pygad_random_mutation_probability = pygad_random_mutation_probability
         self._pygad_adaptive_mutation_probabilities = pygad_adaptive_mutation_probabilities
         self._scipy_de_strategy = scipy_de_strategy
+        self._cmaes_enabled = cmaes_enabled
+        self._cmaes_sigma_fraction = cmaes_sigma_fraction
         self._normal_distribution_mutation_min_std_dev_decay_generations = normal_distribution_mutation_min_std_dev_decay_generations
         self.backup_settings()
 
@@ -149,6 +155,8 @@ class ExperimentGASettings:
         self._pygad_random_mutation_probability_ = self.pygad_random_mutation_probability
         self._pygad_adaptive_mutation_probabilities_ = self.pygad_adaptive_mutation_probabilities
         self._scipy_de_strategy_ = self.scipy_de_strategy
+        self._cmaes_enabled_ = self.cmaes_enabled
+        self._cmaes_sigma_fraction_ = self.cmaes_sigma_fraction
         self._normal_distribution_mutation_min_std_dev_decay_generations_ = self.normal_distribution_mutation_min_std_dev_decay_generations
 
     def restore_settings(self):
@@ -182,6 +190,8 @@ class ExperimentGASettings:
         self.pygad_random_mutation_probability = self._pygad_random_mutation_probability_
         self.pygad_adaptive_mutation_probabilities = self._pygad_adaptive_mutation_probabilities_
         self.scipy_de_strategy = self._scipy_de_strategy_
+        self.cmaes_enabled = self._cmaes_enabled_
+        self.cmaes_sigma_fraction = self._cmaes_sigma_fraction_
         self.normal_distribution_mutation_min_std_dev_decay_generations = self._normal_distribution_mutation_min_std_dev_decay_generations_
 
     @property
@@ -477,6 +487,27 @@ class ExperimentGASettings:
         self._scipy_de_strategy = value
 
     @property
+    def cmaes_enabled(self) -> bool:
+        return self._cmaes_enabled
+
+    @cmaes_enabled.setter
+    def cmaes_enabled(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError("cmaes_enabled must be a boolean")
+        self._cmaes_enabled = value
+
+    @property
+    def cmaes_sigma_fraction(self) -> float:
+        """Initial standard deviation of CMA-ES, as a fraction of the range of the variables."""
+        return self._cmaes_sigma_fraction
+
+    @cmaes_sigma_fraction.setter
+    def cmaes_sigma_fraction(self, value: float):
+        if not value > 0:
+            raise ValueError("cmaes_sigma_fraction must be positive")
+        self._cmaes_sigma_fraction = value
+
+    @property
     def normal_distribution_mutation_min_std_dev_decay_generations(self):
         """GAdapt: None (the lower bound of the Gaussian mutation step is constant), or a number of generations."""
         return self._normal_distribution_mutation_min_std_dev_decay_generations
@@ -518,6 +549,8 @@ class ExperimentGASettings:
             f"pygad_random_mutation_probability={self.pygad_random_mutation_probability}, "
             f"pygad_adaptive_mutation_probabilities={self.pygad_adaptive_mutation_probabilities}, "
             f"scipy_de_strategy={self.scipy_de_strategy}, "
+            f"cmaes_enabled={self.cmaes_enabled}, "
+            f"cmaes_sigma_fraction={self.cmaes_sigma_fraction}, "
             f"normal_distribution_mutation_min_std_dev_decay_generations={self.normal_distribution_mutation_min_std_dev_decay_generations}"
             f")"
         )

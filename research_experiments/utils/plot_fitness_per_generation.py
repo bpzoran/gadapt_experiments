@@ -23,7 +23,7 @@ FIG_W, FIG_H = 8.7, 6.7
 AX_LEFT, AX_BOTTOM, AX_W, AX_H = 1.0, 1.7, 6.4, 4.4
 
 
-STRATEGY_ORDER = ("differential evolution", "random mutation", "diversity mutation", "adaptive mutation")
+STRATEGY_ORDER = ("differential evolution", "cma-es", "random mutation", "diversity mutation", "adaptive mutation")
 
 
 def _fixed_figure_and_axes():
@@ -238,6 +238,7 @@ def plot_convergence_curve(
     afi_vs_adaptive = compute_afi_percent(metrics_by_strategy, baseline="adaptive mutation")
     afi_vs_random = compute_afi_percent(metrics_by_strategy, baseline="random mutation")
     afi_vs_differential = compute_afi_percent(metrics_by_strategy, baseline="differential evolution")
+    afi_vs_cmaes = compute_afi_percent(metrics_by_strategy, baseline="cma-es")
 
     # Build AFI text with available comparisons
     afi_text_lines = []
@@ -247,6 +248,8 @@ def plot_convergence_curve(
         afi_text_lines.append(f"AFI vs random: {afi_vs_random:.2f}%")
     if not np.isnan(afi_vs_differential):
         afi_text_lines.append(f"AFI vs differential: {afi_vs_differential:.2f}%")
+    if not np.isnan(afi_vs_cmaes):
+        afi_text_lines.append(f"AFI vs CMA-ES: {afi_vs_cmaes:.2f}%")
     
     afi_text = "\n".join(afi_text_lines) if afi_text_lines else "AFI: N/A"
     

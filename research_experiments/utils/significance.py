@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import friedmanchisquare, rankdata, wilcoxon
 
-BASELINES = ("adaptive mutation", "random mutation", "differential evolution")
+BASELINES = ("adaptive mutation", "random mutation", "differential evolution", "cma-es")
 DIVERSITY = "diversity mutation"
 
 _LABEL_RE = re.compile(r"^(.*)\s*\((\d+)\s*Variables,\s*Saturation\s*=\s*(\d+)\)\s*$", re.IGNORECASE)
@@ -202,6 +202,7 @@ def friedman_test_suite(
     Followed by a Holm-corrected pairwise Wilcoxon signed-rank post-hoc between
     Diversity mutation and each baseline (functions as matched pairs).
     """
+    baselines = tuple(b for b in baselines if b in set(merged_df["strategy"]))  # a disabled strategy is not compared
     strategies = (DIVERSITY,) + baselines
     per_function = (
         merged_df[merged_df["strategy"].isin(strategies)]

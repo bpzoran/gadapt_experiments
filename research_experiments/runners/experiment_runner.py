@@ -40,7 +40,10 @@ def run_experiment(experiment: Callable) -> None:
     parser.add_argument("--pygad_adaptive_mutation_enabled", type=str2bool, help="Pygad adaptive mutation enabled")
     parser.add_argument("--log_to_file", type=str2bool, help="Log to file")
     parser.add_argument("--scipy_de_enabled", type=str2bool, help="SciPy differential evolution enabled")
+    parser.add_argument("--cmaes_enabled", type=str2bool, help="CMA-ES enabled")
 
+    parser.add_argument("--cmaes_sigma_fraction", type=float,
+                        help="CMA-ES: the initial standard deviation, as a fraction of the range of the variables")
     parser.add_argument("--pygad_random_mutation_probability", type=float,
                         help="Mutation probability of PyGAD random mutation (0-1)")
     parser.add_argument("--pygad_adaptive_mutation_probabilities", type=float, nargs=2, metavar=("LOW_QUALITY", "HIGH_QUALITY"),
@@ -92,6 +95,8 @@ def run_experiment(experiment: Callable) -> None:
     if args.pygad_adaptive_mutation_enabled is not None: app_settings.pygad_adaptive_mutation_enabled = args.pygad_adaptive_mutation_enabled
     if args.log_to_file is not None: app_settings.log_to_file = args.log_to_file
     if args.scipy_de_enabled is not None: app_settings.scipy_de_enabled = args.scipy_de_enabled
+    if args.cmaes_enabled is not None: app_settings.cmaes_enabled = args.cmaes_enabled
+    if args.cmaes_sigma_fraction is not None: app_settings.cmaes_sigma_fraction = args.cmaes_sigma_fraction
 
     if args.plot_stat is not None: app_settings.plot_stat = args.plot_stat
     if args.plot_band is not None: app_settings.plot_band = args.plot_band
